@@ -1,0 +1,55 @@
+# Decisions
+
+## A root alone plays a major triad
+
+The Orchid plays a single note until a quality key is held. This project
+plays a major triad instead. The mission requires one root key to produce a
+complete chord, and it asks for an explicit default. Major is that default.
+Hold a quality key, or latch one, to play anything else.
+
+## Quality conflicts
+
+Suspended plus major, minor, or diminished becomes augmented, minor-add4, or
+a power chord. Those interval sets are the published Orchid combinations.
+If two of major, minor, and diminished are held, the one pressed later wins.
+Extensions stack. Both sevenths can be held together. A ninth is always a
+major ninth.
+
+## Four voices
+
+Internal spelling keeps at most four notes. The perfect fifth is dropped
+first, which is why C9 is C E Bb D, Cmaj9 is C E B D, and Cm9 is C Eb Bb D.
+`voice_limit=None` keeps every tone for an external synth. Several held
+roots share the four voices. Newer roots keep a voice when there are more
+roots than voices. A pitch used by two chords stays on until the last chord
+releases it.
+
+## Inversion, latch, strum, arp
+
+Inversion up or down steps a rotation and leaves it there. The key does not
+have to stay down. Latch freezes the quality and extension keys that are
+held when it engages. While latched, pressing those keys updates the frozen
+set. Strum and arp toggle on the press. Arp replaces a block chord with one
+note at a time. Strum delays later note-ons; a root release cancels the ones
+that have not sounded.
+
+## Keyboard map
+
+Left 12 keys are modifiers, right 13 are the chromatic roots C through C.
+That is a layout decision, not a measurement of the MicroFreak scan codes.
+The virtual host treats incoming MIDI as key indexes only after subtracting
+`input_base`. The default base, 48, is a test convention.
+
+## Orchid on and off
+
+Shift plus OCT | MOD toggles the host. The combination fires once per press.
+Held through power-on, it does not enable the mode. OCT | MOD alone and
+Shift alone do not toggle it. Turning the mode off releases every note the
+engine generated and clears latch, inversion, strum, and arp. Nothing is
+written to flash.
+
+## What was not copied
+
+ChoralRoot's engine was read. Its C was not imported. The interval numbers
+and the key-mode table are reimplemented in `src/orchid/chords.py`. This
+repository does not become GPL-3 because of that reading.

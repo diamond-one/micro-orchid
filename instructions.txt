@@ -1,0 +1,1034 @@
+# AUTONOMOUS ENGINEERING MISSION
+# Orchid-Style Firmware for the Arturia MicroFreak
+## Build → Emulate → Test → Debug → Repeat → Deliver
+
+**EXECUTION DIRECTIVE: START IMMEDIATELY. DO NOT STOP AT PLANNING.**
+
+You are an autonomous, multi-disciplinary engineering team consisting of senior embedded firmware engineers, ARM reverse engineers, synthesizer/MIDI developers, emulator engineers, automated-testing specialists, and independent code reviewers.
+
+Your mission is to develop and validate a working **Orchid-inspired Chord Performance Mode running natively on the Arturia MicroFreak**.
+
+The preferred final outcome is a MicroFreak that provides the Telepathic Instruments Orchid's expressive chord-generation workflow directly from its own keyboard and controls, with no external computer required during normal performance.
+
+The project must progress beyond feasibility studies into actual working software, integration, emulation, regression testing, and a reproducible firmware patch.
+
+**Begin executing now. Continue autonomously through every development, debugging, testing, and verification step that your environment permits. Do not stop simply because a milestone, research report, or successful boot has been achieved.**
+
+Only stop when:
+- All achievable completion criteria have passed and the final deliverables exist.
+- A genuine, evidenced technical blocker prevents further progress.
+- A required physical-device operation reaches the explicit human-approval boundary.
+- The execution environment imposes a hard limit. In that case, persist all work and a precise resume plan rather than reporting the project as complete.
+
+Do not repeatedly ask for guidance, confirmation, or architectural decisions that can be resolved through engineering judgment.
+
+---
+
+# 1. MISSION OBJECTIVE
+
+Implement Orchid-style chord performance on the MicroFreak through verified modifications to its existing firmware.
+
+The desired experience:
+
+- Left-hand keys select chord qualities and extensions.
+- Right-hand keys play root notes.
+- Pressing one root key generates a complete chord.
+- Chord modifiers can be combined.
+- Chord qualities can change while a root remains held.
+- Chord selections can be momentary or latched.
+- Inversions and voicings can be adjusted during performance.
+- Four-note voice limits are handled intelligently.
+- Normal MicroFreak functionality remains available outside Orchid Mode.
+- The implementation must not compromise presets, calibration, recovery mechanisms, or unrelated synthesizer behavior.
+
+**Primary goal:** A working native firmware patch, proven through execution inside microfreak-emu.
+
+**Secondary goal:** A fully functional host-MIDI implementation that validates the musical behavior independently and remains usable if native firmware integration proves impossible.
+
+The host-MIDI implementation is not a replacement for attempting the native patch. Both development paths should share the same tested musical specification.
+
+---
+
+# 2. EXISTING WORK AND RESEARCH
+
+A previous agent reportedly installed:
+
+- REA 6.8.0
+- `mfreak` / microfreak-tools
+
+Existing repository documents reportedly include:
+
+- `docs/PLAN.md`
+- `docs/TOOLS.md`
+- `docs/SAFETY.md`
+- `docs/FEATURE-MAP.md`
+- `scripts/setup-toolchain.sh`
+
+Inspect and reuse existing work. Preserve useful code, research, notes, and Git history.
+
+Do not blindly trust earlier agent conclusions. Independently confirm tool versions, firmware mappings, command behavior, hardware assumptions, and repository revisions.
+
+## Primary resources
+
+**MicroFreak emulator — PRIMARY TEST ENVIRONMENT**
+
+https://github.com/gbryant/microfreak-emu
+
+**MicroFreak firmware tools**
+
+https://github.com/gbryant/microfreak-tools
+
+**REA reverse-engineering toolkit**
+
+https://github.com/morluto/rea
+
+**Freakpatch framework**
+
+https://github.com/ThisFreakDoesntExist/ThisFirmwareDoesNotExist
+
+**Freakier Firmware / SuperFreaker**
+
+https://freakierfirmware.com/microfreak/
+
+https://freakierfirmware.com/microfreak/patcher/
+
+**ChoralRoot FM-1 — Open-source Orchid-inspired functionality**
+
+https://github.com/Quixotic7/ChoralRootFM1
+
+**Official Orchid reference**
+
+https://firmware.telepathicinstruments.com/
+
+**Official Arturia resources**
+
+https://www.arturia.com/support/downloads-manuals/product/microfreak
+
+Study the implementations, not just their README files.
+
+Record and pin relevant repository commits and dependency versions.
+
+Study ChoralRoot to understand the chord engine and musical interaction model. Do not attempt to flash FM-1 or Orchid firmware onto the MicroFreak.
+
+Respect the licenses of ChoralRoot, community tools, and Arturia firmware. Reimplement functionality as needed rather than copying incompatible or proprietary code.
+
+---
+
+# 3. CRITICAL DESIGN REQUIREMENT: EMULATOR FIRST
+
+The repository `gbryant/microfreak-emu` must become a first-class dependency of this project.
+
+It uses Renode to execute actual Arturia firmware on an emulated STM32 platform.
+
+Its documented capabilities include:
+
+- Booting stock MicroFreak firmware.
+- Running alternative firmware images.
+- Emulating MIDI communication.
+- Loading presets and external flash data.
+- Rendering synthesizer audio.
+- Simulating some panel interactions.
+- Providing display text.
+- Testing firmware-update procedures virtually.
+- Running automated firmware tests.
+
+The emulator is not a perfect physical MicroFreak.
+
+The main STM32 firmware runs under emulation, but the three separate keyboard, touch-matrix, and OLED coprocessors are not executed as complete microcontroller emulations.
+
+Additionally, its analog filter is a software model.
+
+**Do not mistake successful MIDI playback for successful physical keyboard remapping.**
+
+The native Orchid Mode must be tested through the actual firmware input-handling pathway, including simulated keyboard events where possible.
+
+If the emulator cannot currently inject relevant keyboard events, extend its test harness to do so using an independently validated understanding of the coprocessor communication protocol.
+
+Do not invent protocol bytes or assume physical key numbers equal MIDI note numbers.
+
+Use the emulator for testing the firmware's real execution, not simply for producing audio from a separate chord-generation program.
+
+---
+
+# 4. HARDWARE AND FIRMWARE SAFETY
+
+The intended stock firmware reference is Arturia MicroFreak 5.0.0.2084.
+
+Previously documented SHA-256:
+
+`c2b405e3c8565b7b73b4dd06522559458190082a8ba633cc5f1bcc43dc64332c`
+
+Verify this hash against trustworthy source material before relying on it.
+
+The STM32F446 contains an application region starting at `0x0800C000`.
+
+Distinguish carefully between:
+
+- Bootloader sectors.
+- Factory data and calibration.
+- Main application image.
+- Keyboard coprocessor firmware.
+- Touch-matrix coprocessor firmware.
+- Display coprocessor firmware.
+- External preset/sample/wavetable storage.
+
+For the currently documented memory layout, the first 32 KB is the bootloader and the following 16 KB is a factory-data sector. Both are outside the main application and must remain untouched.
+
+Do not modify the bootloader, factory data, device identity, calibration, or coprocessor images.
+
+Use only officially obtained stock firmware.
+
+Do not distribute Arturia firmware binaries.
+
+**ABSOLUTE PHYSICAL-HARDWARE RULE**
+
+No physical firmware flashing, erasing, factory reset, calibration change, or destructive device write is authorized.
+
+Development may build and modify offline images and run them under emulation.
+
+Physical hardware flashing requires separate explicit approval after a release candidate passes all applicable offline verification.
+
+Do not flash SuperFreaker merely as a practice exercise.
+
+Never describe any flashing procedure as risk-free or recovery as guaranteed.
+
+---
+
+# 5. MUSICAL FUNCTIONAL SPECIFICATION
+
+## 5.1 Keyboard layout
+
+The MicroFreak has 25 capacitive keys.
+
+Implement a dedicated Orchid Mode with the same left/right conceptual orientation as the Orchid instrument.
+
+### LEFT 12 KEYS — CHORD MODIFIERS
+
+Proposed functions:
+
+1. Diminished
+2. Minor
+3. Major
+4. Suspended
+5. Sixth
+6. Minor seventh
+7. Major seventh
+8. Ninth
+9. Inversion down
+10. Inversion up
+11. Strum
+12. Arpeggiator
+
+### RIGHT 13 KEYS — ROOT NOTES
+
+Chromatic root keyboard spanning 13 semitones, C through the next C.
+
+The physical keyboard layout and note mappings must be established through reliable evidence.
+
+The above controls are a target layout, not a claim about how existing firmware scans the keyboard.
+
+If the physical layout or firmware imposes conflicts, investigate alternative mappings that preserve the essential two-handed interaction.
+
+An acceptable alternative might use an existing encoder or touch strip for inversion, freeing more keys for chord modifiers.
+
+Maintain the correct orientation:
+
+**LEFT = MODIFIERS. RIGHT = ROOTS.**
+
+## 5.2 Chord functionality
+
+Minimum required:
+
+- Major
+- Minor
+- Diminished
+- Suspended
+- Sixth
+- Minor seventh
+- Major seventh
+- Dominant seventh
+- Ninth
+- Major ninth
+- Minor ninth
+- Modifier combinations
+- Inversions
+- Voicing changes
+- Momentary chord modifiers
+- Latched chord modifiers
+- Changes while holding a root note
+- Proper note-off behavior
+
+Specify chord semantics clearly, including default chord quality when no modifier is held, modifier precedence, and combinations that conflict.
+
+Use the Orchid and ChoralRoot interaction model as references, but make decisions explicit and testable.
+
+## 5.3 Internal four-voice limit
+
+The MicroFreak supports four simultaneous internal paraphonic voices.
+
+Implement four-voice chord reduction.
+
+Examples:
+
+| Chord | Internal voicing |
+|---|---|
+| Cmaj7 | C E G B |
+| Cm7 | C Eb G Bb |
+| C9 | C E Bb D |
+| Cmaj9 | C E B D |
+| Cm9 | C Eb Bb D |
+
+For extended chords, intelligently omit nonessential tones.
+
+Investigate voice-leading-aware note selection to avoid unnecessary jumps between chords.
+
+Handle simultaneous roots and shared pitches correctly.
+
+Do not allow the internal chord engine to exceed its four-voice limit.
+
+An optional extended-MIDI mode may transmit larger chords to external synthesizers. Keep it separate from internal sound generation.
+
+## 5.4 Additional performance controls
+
+Investigate:
+
+- Voicing through the touch strip or encoder.
+- Hold as a chord latch.
+- Key Mode using scales and diatonic harmonization.
+- Optional bass-note output.
+- Strum timing and direction.
+- Arpeggiator integration.
+- Preset-aware settings.
+
+Do not allow advanced features to delay the minimum working implementation.
+
+---
+
+# 6. AUTONOMOUS EXECUTION PLAN
+
+Execute the phases below.
+
+Use parallel specialist agents when available, but maintain a single authoritative repository state and integration branch.
+
+Each phase must produce executable evidence, not merely documentation.
+
+## PHASE A — Immediate environment audit
+
+Start now.
+
+1. Inspect the existing workspace.
+2. Read all current planning and safety documents.
+3. Inspect Git state.
+4. Preserve existing user changes.
+5. Establish an isolated working branch or worktree.
+6. Verify REA and mfreak installations.
+7. Clone or update microfreak-emu and microfreak-tools.
+8. Verify Renode, Python, uv, Ghidra, and required development dependencies.
+9. Audit scripts before execution.
+10. Locate a legitimate stock MicroFreak firmware file.
+11. Verify image structure, version, and hash.
+12. Record all tool and dependency revisions.
+
+If firmware is unavailable, continue all tasks that can be completed without it and document the precise missing input. Do not substitute an untrusted firmware download.
+
+Produce `docs/ENVIRONMENT.md`.
+
+Proceed automatically.
+
+## PHASE B — Install and validate microfreak-emu
+
+Follow upstream setup documentation, including sibling repository placement where required.
+
+Establish the baseline using documented commands such as:
+
+```bash
+uv run mfemu check
+uv run mfemu boot
+```
+
+Run upstream tests against the unmodified stock firmware.
+
+Verify:
+
+- Firmware boots.
+- MIDI messages reach the firmware.
+- Presets load.
+- Audio renders.
+- Relevant controls can be simulated.
+- Test results are repeatable.
+- Snapshots are not stale.
+- Firmware image changes are detected.
+
+Record baseline test results and known emulator limitations.
+
+This baseline becomes the reference for all patched-firmware regression testing.
+
+If an upstream test fails, investigate whether the problem is environment-related, emulator-related, or firmware-related.
+
+Do not silently skip failing tests.
+
+## PHASE C — Implement the Orchid chord engine
+
+Study the actual ChoralRoot source code and design.
+
+Extract or independently implement the musical rules for:
+
+- Root selection
+- Chord qualities
+- Extensions
+- Modifier combinations
+- Inversions
+- Voicing
+- Key Mode
+- Latching
+- Note lifecycle
+- Voice allocation
+
+Build a standalone deterministic chord engine with no unnecessary dependency on specific MicroFreak peripherals.
+
+Its input must be a well-defined musical state.
+
+Its output must be an exact set of notes and corresponding lifecycle events.
+
+Create automated golden-reference tests for the chord engine.
+
+Test every chromatic root, chord type, supported extension combination, and inversion.
+
+Implement four-voice internal voicings and separate extended-MIDI voicings.
+
+Keep this implementation suitable for reusing its algorithms or tables in the firmware patch.
+
+## PHASE D — Host-MIDI reference prototype
+
+Build a functional host-MIDI Orchid Mode as the first complete playable reference.
+
+It should:
+
+- Read MicroFreak MIDI input.
+- Interpret left-hand modifier keys.
+- Interpret right-hand root keys.
+- Generate chords.
+- Route notes back to the MicroFreak.
+- Support four-voice reduction.
+- Handle note-off, latch, and sustain.
+- Avoid MIDI feedback loops.
+- Exit without leaving stuck notes.
+- Provide a virtual MIDI mode for tests.
+
+Support configuration for MIDI ports, channels, local control requirements, and debugging.
+
+Where useful, use `mido`, `python-rtmidi`, or another justified MIDI library.
+
+A computer-based prototype demonstrates musical behavior. It does not satisfy the native firmware objective.
+
+Proceed to native firmware integration once the chord engine is reliable.
+
+## PHASE E — Reverse engineer native integration points
+
+Use:
+
+- REA
+- Ghidra
+- microfreak-tools
+- freakpatch
+- microfreak-emu
+- Unicorn, where appropriate
+
+Study the existing MicroFreak firmware analysis in the emulator repository before repeating established work.
+
+Map the paths for:
+
+- Keyboard events
+- MIDI reception
+- Note dispatch
+- Voice allocation
+- Oscillator triggering
+- Chord generation
+- Panel controls
+- Hold and latch
+- Touch-strip input
+- Display output
+- Preset storage
+- Mode selection
+
+For each proposed hook, record:
+
+- Address
+- Firmware hash/version
+- Function behavior
+- Supporting execution trace or disassembly
+- Calling convention
+- Register usage
+- Side effects
+- Available code space
+- RAM requirements
+- Patch compatibility
+- Confidence level
+
+Do not assume a code region is unused merely because its bytes appear empty.
+
+Use emulator breakpoints and differential execution to verify hook behavior.
+
+Determine which existing chord functionality can be reused rather than recreated.
+
+## PHASE F — Extend the emulator if necessary
+
+Investigate how the main firmware receives events from the keyboard coprocessor.
+
+Identify whether `mfemu panel` can already inject the required events.
+
+If not, implement a controlled and accurately modeled keyboard-event injector.
+
+It must support:
+
+- Individual key-down events
+- Individual key-up events
+- Modifier and root combinations
+- Multiple simultaneous physical keys
+- Repeated events
+- Rapid transitions
+- Held notes
+- Latch behavior
+- Edge cases around mode switching
+
+Validate the simulated input protocol before relying on test results.
+
+Build a dedicated test interface for Orchid-style performance sequences.
+
+Do not modify unrelated emulator behavior unnecessarily.
+
+Where appropriate, keep emulator enhancements separately maintainable and upstream-compatible.
+
+## PHASE G — Implement native firmware patches
+
+This is a primary deliverable.
+
+Once the necessary firmware behavior is understood, implement a deterministic native Orchid Mode patch.
+
+Prefer the smallest viable patch that delivers the complete basic two-handed chord workflow.
+
+Requirements:
+
+- Exact stock-firmware hash gate.
+- Verified hooks.
+- Safe Thumb-2 branch handling.
+- Correct register and stack preservation.
+- Verified code-space allocation.
+- Validated RAM use.
+- No unauthorized persistent writes.
+- No bootloader changes.
+- No factory-data changes.
+- No coprocessor firmware modification.
+- No patching outside known safe image boundaries.
+- No unexplained changed bytes.
+- No silent patch conflicts.
+
+Build one feature at a time.
+
+First make one root key generate one correct chord through the MicroFreak's actual note-handling path.
+
+Then add chord types, modifiers, latching, inversions, and other features.
+
+Do not attempt all functionality in one untested binary modification.
+
+Make the patched firmware build reproducibly from a stock image that the user provides.
+
+Record every modified byte range and its purpose.
+
+If a native implementation does not fit available resources, evaluate smaller architectures, existing firmware functionality, and alternative hooks before declaring the approach blocked.
+
+Do not fabricate success or bypass memory-safety constraints to force completion.
+
+## PHASE H — Execute patched firmware under Renode
+
+The patched MicroFreak application must boot inside microfreak-emu.
+
+For each implemented feature:
+
+1. Build the patched firmware.
+2. Validate image structure.
+3. Boot it in Renode.
+4. Confirm the actual modified code executes.
+5. Inject a relevant keyboard or MIDI event.
+6. Capture the resulting chord notes.
+7. Compare against the reference chord engine.
+8. Render audio where appropriate.
+9. Validate note release.
+10. Check for crashes, memory faults, or resource violations.
+11. Compare against a stock firmware control.
+12. Fix failures.
+13. Rerun all affected tests.
+
+A successful boot is not sufficient.
+
+A four-note MIDI input producing a four-note chord is not sufficient.
+
+The required proof is that a single root event plus selected modifiers causes the **patched MicroFreak firmware itself** to generate the expected chord.
+
+Distinguish between internal voice events, transmitted MIDI events, and resulting audio.
+
+## PHASE I — Comprehensive automated testing
+
+Develop automated tests for:
+
+### Musical correctness
+
+- All 12 chromatic roots
+- Upper-C boundary
+- Every chord quality
+- Every supported extension
+- Valid combinations
+- Inversions
+- Voicing
+- Key Mode
+- Voice reduction
+
+### Interaction correctness
+
+- Modifier before root
+- Root before modifier
+- Modifier changes while root held
+- Multiple roots
+- Multiple modifiers
+- Momentary modifiers
+- Latched modifiers
+- Sustain
+- Note-on/note-off matching
+- Rapid repeated presses
+- Unexpected mode changes
+- Octave changes
+- Polyphony overflow
+
+### Firmware integrity
+
+- Boot success
+- No hard faults
+- No unexpected changes to stock code regions
+- No memory corruption
+- No unbounded stack growth
+- No unsupported flash writes
+- No forbidden firmware-region modification
+- No unexpected changes to preset storage
+- Valid MIDI output
+- Correct control state
+- Stable timing where measurable
+
+### Regression behavior
+
+Compare stock and patched firmware for unaffected functionality:
+
+- Ordinary playing
+- Oscillator triggering
+- Paraphonic note allocation
+- MIDI reception
+- Preset loading
+- Common controls
+- Hold and octave behavior
+- Display communication where supported
+- Audio rendering
+- Firmware startup
+
+Use negative controls and injected failures to prove tests can actually detect incorrect behavior.
+
+Run deterministic and randomized state-transition tests.
+
+Check cleanup after interruption, shutdown, or simulated MIDI disconnect.
+
+Do not weaken assertions merely to obtain passing results.
+
+## PHASE J — Independent adversarial review
+
+If multiple agents are available, assign independent reviewers.
+
+**Firmware reviewer:** Verify patch boundaries, ARM instructions, RAM, stack, hooks, and binary integrity.
+
+**MIDI reviewer:** Verify note lifecycle, voice stealing, modifier interpretation, and stuck-note prevention.
+
+**Musical reviewer:** Compare chord results against the documented specification and ChoralRoot-derived reference behavior.
+
+**Emulator reviewer:** Verify that tests execute the intended firmware paths and that simulated peripherals provide valid evidence.
+
+**Regression reviewer:** Perform clean builds, reproduce tests, and check for unintended effects.
+
+All findings must be recorded.
+
+Fix confirmed problems and rerun appropriate tests.
+
+Do not permit the implementing agent to be the sole judge of correctness.
+
+---
+
+# 7. CONTINUOUS SELF-CORRECTION LOOP
+
+This loop applies across every phase:
+
+**IMPLEMENT → RUN → MEASURE → INSPECT → DIAGNOSE → FIX → RETEST → INDEPENDENTLY VERIFY**
+
+For every failed test:
+
+1. Capture the complete failure.
+2. Identify the precise failing requirement.
+3. Form a testable explanation.
+4. Inspect relevant source, traces, and firmware state.
+5. Apply the smallest justified fix.
+6. Rerun the individual test.
+7. Rerun relevant regression tests.
+8. Record the correction.
+9. Continue to the next failing requirement.
+
+If three iterations fail to resolve the same problem, challenge the original approach and investigate alternatives.
+
+Do not loop indefinitely repeating identical actions without new evidence.
+
+Do not label unsupported behavior as passing.
+
+No fabricated test logs, inferred success, or claims of tests that were never executed.
+
+### Agent continuity
+
+Maintain these files throughout execution:
+
+- `docs/PROGRESS.md`
+- `docs/TASKS.md`
+- `docs/DECISIONS.md`
+- `docs/BLOCKERS.md`
+
+Record:
+
+- Current phase
+- Completed tasks
+- Active tasks
+- Latest passing tests
+- Latest failures
+- Known problems
+- Important source revisions
+- Last verified firmware build
+- Next exact commands to execute
+
+Commit working checkpoints locally.
+
+If the execution session is interrupted, the workspace must contain enough information for a new agent session to resume without repeating completed work.
+
+Whenever the environment supports automatic continuation, use it.
+
+Do not claim to be working in the background if the environment does not support it.
+
+---
+
+# 8. BUILD A ONE-COMMAND VERIFICATION PIPELINE
+
+Create a documented script or command such as:
+
+`./scripts/verify-orchid.sh`
+
+Its exact name can follow the repository's conventions.
+
+The command should automatically:
+
+1. Verify required dependencies.
+2. Verify the stock firmware image.
+3. Build the chord engine.
+4. Run chord-engine unit tests.
+5. Build or locate the offline native patch.
+6. Verify patch structure and byte ranges.
+7. Boot the patched firmware in microfreak-emu.
+8. Inject predefined Orchid performance sequences.
+9. Verify resulting notes and note-off events.
+10. Run firmware regression tests.
+11. Render representative audio tests.
+12. Collect failures and diagnostics.
+13. Produce a machine-readable report.
+14. Produce a readable summary.
+15. Exit with a nonzero result if a required check fails.
+
+Tests requiring unavailable resources must be reported as BLOCKED or NOT RUN, not PASS.
+
+Ensure the pipeline detects stale emulator snapshots and firmware build artifacts.
+
+Prefer reproducible clean builds.
+
+The final firmware candidate should have a clear source revision, input firmware hash, patch manifest, and complete verification report.
+
+---
+
+# 9. DEFINITION OF DONE
+
+Use explicit milestone statuses:
+
+PASS / FAIL / BLOCKED / NOT STARTED.
+
+### M1 — Development environment
+Tools installed, stock firmware verified, repository baseline reproducible.
+
+### M2 — Emulator
+Stock Arturia firmware boots successfully in microfreak-emu and baseline tests pass.
+
+### M3 — Chord engine
+Required musical functions implemented and automated tests passing.
+
+### M4 — Host MIDI
+Orchid-style modifier/root workflow demonstrated through simulated MIDI, with hardware testing separately identified.
+
+### M5 — Native firmware integration
+Chord generation is implemented in the modified MicroFreak application and shown to execute in the emulator.
+
+### M6 — Complete basic Orchid Mode
+Left-side modifiers, right-side roots, chord changes, latching, inversions, and four-voice behavior work through the patched firmware.
+
+### M7 — Regression and safety
+All applicable emulator, MIDI, integrity, and regression tests pass. Independent reviews completed.
+
+### M8 — Release candidate
+Reproducible build and offline patch instructions are delivered, with complete test results and remaining limitations.
+
+### M9 — Physical hardware verification
+Only completed after an independently authorized flash and actual hardware tests.
+
+**The autonomous offline development goal is M1–M8.**
+
+Do not stop at M2 or M3 and call the project complete.
+
+Do not mark M5 or M6 complete based solely on tests of a separate host-MIDI application.
+
+M9 is not authorized by this instruction and must remain pending until separately approved.
+
+If M5–M8 are genuinely infeasible or blocked, deliver the best fully tested working implementation and a detailed technical account explaining exactly why the native target could not be completed.
+
+This is an exception-reporting path, not permission to abandon native firmware development without investigation.
+
+---
+
+# 10. REQUIRED FINAL DELIVERABLES
+
+The repository must contain:
+
+**Working software**
+- Chord-engine source
+- Host-MIDI implementation
+- Native firmware patch source where feasible
+- Deterministic patch-building scripts
+- Emulator integration code
+- Keyboard-event test harness where needed
+
+**Testing**
+- Chord-engine test suite
+- MIDI integration tests
+- Emulator integration tests
+- Firmware regression tests
+- Automated verification command
+- Representative audio outputs
+- Machine-readable and human-readable test reports
+
+**Documentation**
+- Architecture
+- Control mapping
+- Firmware integration details
+- Installation and build guide
+- Emulator setup
+- Safety and limitations
+- Hardware validation checklist
+- Recovery procedure
+- Final milestone status
+
+**Final release candidate**
+- Source commit identifier
+- Dependency versions
+- Official input image hash
+- Patch recipe
+- Reproducible build instructions
+- Resulting image hash
+- Changed-byte manifest
+- Test results
+- Known limitations
+
+Keep proprietary firmware images and device-specific bootloader dumps out of published repositories.
+
+---
+
+# 11. OPERATIONAL PRIORITIES
+
+When choosing between approaches, use this order:
+
+1. Correctness and protection of the physical instrument
+2. Working native Orchid chord behavior
+3. Repeatable emulator-based proof
+4. Preservation of existing MicroFreak functionality
+5. Musical usability and responsiveness
+6. Maintainable code and reproducible builds
+7. Advanced features and optimization
+
+Do not spend excessive time on documentation while implementation remains incomplete.
+
+Do not implement a looper, beat machine, or sophisticated accompaniment before basic chord generation works.
+
+Do not prematurely abandon native implementation in favor of a host-only system.
+
+Equally, do not sacrifice safety or fabricate claims to achieve a native patch.
+
+Use documented evidence to determine what is possible.
+
+---
+
+# 12. IMMEDIATE EXECUTION INSTRUCTIONS
+
+**START NOW.**
+
+Your next actions are:
+
+1. Inspect the current repository and Git state.
+2. Read the existing planning documents.
+3. Audit current installations.
+4. Install or configure microfreak-emu and Renode.
+5. Verify the available stock firmware image.
+6. Run the emulator's baseline tests.
+7. Inspect ChoralRoot's chord-generation source.
+8. Implement the independently testable chord engine.
+9. Build the MIDI reference implementation.
+10. Investigate keyboard-event injection.
+11. Reverse engineer the necessary native hooks.
+12. Build and test the smallest working firmware patch.
+13. Extend the native implementation incrementally.
+14. Run the automated test and self-correction loop.
+15. Complete independent review and prepare the release candidate.
+
+These are execution instructions, not a request to create a new plan and stop.
+
+If several independent activities can run in parallel, delegate them to specialist agents. Integrate their work through reviewed commits and shared tests.
+
+Resolve ordinary engineering decisions without asking the user.
+
+Report concise progress at milestones, but keep working after reporting whenever your environment permits.
+
+Request human input only when a missing essential resource cannot be obtained safely, a material decision cannot be inferred from the specification, or an operation requires separate authorization.
+
+**Do not stop after installing tools.**
+
+**Do not stop after completing research.**
+
+**Do not stop after generating chord tables.**
+
+**Do not stop when the firmware merely boots in the emulator.**
+
+**Do not stop because the first implementation fails. Debug it.**
+
+**Do not report success unless the implemented functionality has been demonstrated by the appropriate tests.**
+
+The target is a fully implemented, emulator-tested, reproducible native Orchid-style MicroFreak firmware candidate, with no physical flashing during development.
+
+Begin executing the first repository inspection and environment-validation commands immediately. Continue through the authorized work until completion criteria are satisfied or a genuine blocker is evidenced and documented.
+
+
+# Orchid Mode — Mandatory Activation and Deactivation Specification
+
+## Required control shortcut
+
+**Shift + OCT | MOD toggles Orchid Mode ON and OFF.**
+
+This is a required part of the native MicroFreak implementation.
+
+The shortcut refers to the physical **OCT | MOD** button in the Arpeggiator/Sequencer section, not the Octave Up or Octave Down buttons.
+
+### Activation
+
+When the MicroFreak is running normally:
+
+1. The user holds Shift.
+2. The user presses OCT | MOD.
+3. Orchid Mode activates immediately.
+4. The OLED briefly displays `ORCHID ON`.
+5. The keyboard switches to the Orchid performance layout.
+
+In Orchid Mode:
+
+- Left 12 physical keys: chord qualities, extensions and performance modifiers.
+- Right 13 physical keys: chromatic chord roots.
+- The established Orchid chord engine handles chord generation and voicings.
+- Normal synth sound-generation controls remain available wherever practical.
+
+### Deactivation
+
+Pressing **Shift + OCT | MOD** again:
+
+1. Turns Orchid Mode off.
+2. Releases all notes generated by Orchid Mode.
+3. Clears transient chord-performance state.
+4. Restores the original 25-key MicroFreak keyboard behavior.
+5. Restores any temporarily reassigned controls.
+6. Briefly displays `ORCHID OFF`.
+
+All normal synthesizer functionality must remain available after deactivation.
+
+### Normal button behavior
+
+- OCT | MOD without Shift must retain its original behavior.
+- Shift alone must retain its original behavior.
+- Existing Shift combinations must continue working outside Orchid Mode.
+- Standard Octave Up/Down functionality must remain intact.
+- Existing sequencer, arpeggiator, Hold and modulation-track operations must not be unintentionally triggered by the Orchid toggle.
+- Handle physical Shift-held and any supported Shift-latched behavior consistently, after verifying the stock firmware's actual input semantics.
+
+The shortcut must activate only once per distinct button press. Holding the combination must not repeatedly toggle the mode.
+
+Consume the recognized shortcut event so it cannot also execute an unintended stock action.
+
+### Firmware recovery must remain unchanged
+
+**Critical safety requirement**
+
+The MicroFreak's existing recovery shortcut is:
+
+**Shift + Arp + OCT | MOD held during power-on.**
+
+Do not modify, intercept, or interfere with this bootloader functionality.
+
+The Orchid shortcut may operate only after the firmware has completed normal startup.
+
+The bootloader must remain entirely untouched.
+
+If a conflicting combination is detected, recovery and existing safety-related functions must take precedence.
+
+### State handling
+
+Use an explicit internal state such as `orchid_mode_enabled`.
+
+Requirements:
+
+- Default to normal MicroFreak mode after power-on.
+- Do not persist Orchid Mode activation to flash in the initial implementation.
+- Prevent stuck notes when switching modes.
+- Handle mode changes while notes are held.
+- Avoid accidental extra note-on or note-off messages.
+- Restore normal controls without losing unrelated preset or synth state.
+- Do not write presets, factory settings, calibration or other persistent data merely to toggle the mode.
+
+### Mandatory emulator tests
+
+Extend `microfreak-emu` and its automated test harness as necessary.
+
+Test the following against the actual patched firmware execution path:
+
+1. Start in normal mode: Orchid disabled.
+2. Press Shift alone: Orchid remains disabled.
+3. Press OCT | MOD alone: normal behavior, Orchid remains disabled.
+4. Hold Shift and press OCT | MOD: Orchid enabled.
+5. Release both buttons: Orchid remains enabled.
+6. Press Shift + OCT | MOD again: Orchid disabled.
+7. Hold the shortcut: only one toggle occurs.
+8. Repeatedly toggle modes: no crashes or stuck notes.
+9. Switch modes while a chord is playing: generated notes are correctly released.
+10. Return to normal mode: keyboard, MIDI and synthesizer behavior match stock expectations.
+11. Test with the arpeggiator and sequencer active.
+12. Test the shortcut under supported Shift-latch conditions.
+13. Boot the patched firmware while the shortcut buttons are held: no unintended mode activation.
+14. Verify preservation of the recovery mechanism through static checks and available emulator tests.
+15. Ensure no persistent settings or protected firmware regions are modified by ordinary mode changes.
+
+If the existing emulator cannot simulate this button combination, implement a validated input-event injection mechanism and test it.
+
+Do not report this feature as complete based solely on setting a variable in a standalone test.
+
+**Completion requires demonstrating Shift + OCT | MOD enabling and disabling the actual Orchid functionality while the patched MicroFreak firmware executes under Renode.**
+
+Continue with the entire original autonomous engineering mission, incorporating this specification into the architecture, implementation, automated regression suite and final definition of done.
+
+Do not pause after updating documentation. Implement, test, debug and verify this control as part of the complete Orchid Mode release candidate. Do not flash the physical instrument without separate explicit approval.

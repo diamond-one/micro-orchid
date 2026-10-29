@@ -5,3 +5,13 @@ credentials.json
 node_modules/
 __pycache__/
 .DS_Store
+*.pyc
+.pytest_cache/
+.venv/
+third_party/
+firmware/stock/
+*.mff
+*.bin
+*.raw
+*.wav
+reports/

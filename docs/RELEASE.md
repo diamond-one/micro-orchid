@@ -49,3 +49,12 @@ after any change to the C sources. A doc-only change does not move it.
 - Index 0 is not proven to be the leftmost physical key. Index n sounds
   as MIDI note n+48 for indexes 0, 7, 12, and 24.
 - The payload is a temp result of this recipe. It is not stored here.
+
+## MIDI Control Center file
+
+`scripts/pack_mff.py` writes `micro-orchid.mff` in Downloads. It is the
+SuperFreaker container with the mode image in the main application.
+The other images are copied unchanged. The downloads are not modified,
+the file is gitignored, and the script does not flash a device. MIDI
+Control Center's Firmware Revision upgrade selects that `.mff`. The
+stock file and the unmodified SuperFreaker file remain the way back.

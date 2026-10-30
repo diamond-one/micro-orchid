@@ -60,6 +60,18 @@ run the stock action. The button alone still does. The shortcut sends
 `ORCHID ON` and `ORCHID OFF` through the frame builder at `0x080226D0`.
 Renode reconstructed both strings. The button alone does not draw them.
 
+## Armed key while the stock arp is running — a second stream
+
+With the layout on and the arpeggiator on, key 12 plays 60, 64, 67 and
+the stock arp keeps stepping those same pitches. One capture saw about
+a thousand notes. The note function sets held-key bit 12 at
+`0x20003564` before the hook, and that bit stays set. The capture byte
+at voice `0x20003778` + `0x2E5` stays 0, so that path is not the arp.
+Clearing the bit and bypassing that byte did not stop the stream, and
+those edits are not in the image. The sequencer check did not get a
+clean start, because the arp stream was still running. The first speech
+word stays.
+
 ## Physical flash — not authorized
 
 No device write, erase, factory reset, or recovery drill is allowed by the

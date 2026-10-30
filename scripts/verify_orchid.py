@@ -21,9 +21,9 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from firmware.boundaries import (  # noqa: E402
     PATCH_MANIFEST,
+    STOCK_MFF_SHA256,
     STOCK_PAYLOAD_SHA256,
     STOCK_PAYLOAD_SIZE,
-    UNVERIFIED_INSTRUCTION_SHA256,
 )
 
 
@@ -40,10 +40,13 @@ def _firmware() -> dict:
     if not found:
         return {
             "status": "BLOCKED",
-            "detail": "No stock image in firmware/stock. Not downloaded.",
+            "detail": (
+                "Stock 5.0.0.2084 was hashed outside this repo and is not "
+                "copied here. Renode has not booted it."
+            ),
+            "expected_mff_sha256": STOCK_MFF_SHA256,
             "expected_payload_sha256": STOCK_PAYLOAD_SHA256,
             "expected_payload_bytes": STOCK_PAYLOAD_SIZE,
-            "instruction_sha256_not_checked": UNVERIFIED_INSTRUCTION_SHA256,
         }
     return {"status": "NOT RUN", "detail": "Image present but not hashed by this pass.", "files": found}
 

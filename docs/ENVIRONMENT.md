@@ -39,19 +39,13 @@ point uv at those paths. `uv sync` was not run.
 
 ## Stock firmware
 
-Not on this machine. Nothing was downloaded.
+The user's `MicroFreak_Firmware_Update_5_0_0_2084.mff` was hashed in place.
+It was not copied into the repo.
 
-`microfreak-tools` 0.1.0 accepts one payload, and only that payload:
+- container sha256: `c2b405e3c8565b7b73b4dd06522559458190082a8ba633cc5f1bcc43dc64332c`
+- main payload: 473,695 bytes, sha256 `54be2e0b695e2279602513e1a9ed39906408ba221a45e782b61273f0ef55d15f`
 
-- name: `fw 5.0.0.2084 (nanowave_main__fw5_0_0_2084__2023_05_30.bin)`
-- size: 473,695 bytes
-- sha256: `54be2e0b695e2279602513e1a9ed39906408ba221a45e782b61273f0ef55d15f`
-
-The mission notes also quote `c2b405e3c8565b7b73b4dd06522559458190082a8ba633cc5f1bcc43dc64332c`.
-That digest was not checked against a file. It is recorded in
-`firmware/boundaries.py` as unverified. Do not treat the two hashes as the
-same object.
-
-Put an officially obtained `.mff` in `firmware/stock/` when one is available.
-The verify script will still report the image as not booted until Renode is
-installed and a boot is actually run.
+Those are different objects. The first is the whole `.mff`. The second is
+the main application after the 64-byte header and trailing XOR are removed.
+SuperFreaker 0.1.2 is diffed in `docs/SUPERFREAKER.md`. Neither image has
+been booted.

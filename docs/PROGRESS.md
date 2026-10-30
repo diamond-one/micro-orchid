@@ -1,7 +1,9 @@
 # Progress
 
-Phase: C and D are implemented and tested. A, B, and E through H are blocked
-on the stock firmware image, Renode, and a usable code cave.
+Phase: C and D are implemented and tested. The stock image and SuperFreaker
+0.1.2 have been identified and diffed. A native patch is still blocked on
+Renode, an ARM assembler, and a code cave larger than 259 bytes that does
+not collide with SuperFreaker.
 
 ## Done
 
@@ -12,6 +14,11 @@ on the stock firmware image, Renode, and a usable code cave.
 - Implemented `src/orchid/chords.py`, `engine.py`, `layout.py`, `midi_host.py`.
 - 39 unit tests passed via `python scripts/verify_orchid.py`.
 - Recorded the empty patch manifest and the addresses that must stay untouched.
+
+- Verified the stock `.mff` container and payload hashes.
+- Diffed SuperFreaker 0.1.2: 5,705 bytes, main image only. Recorded the
+  ranges in `firmware/superfreaker_v0_1_2_ranges.json`. Coprocessors match
+  stock. The speech cave is untouched. Their shift-lock site is reserved.
 
 ## Not done
 

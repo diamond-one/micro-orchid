@@ -43,7 +43,9 @@ as BLOCKED or NOT RUN, never as a pass.
 | `src/orchid/chords.py` | Chord spelling and four-voice reduction |
 | `src/orchid/engine.py` | Latch, inversion, strum, arp, note on/off |
 | `src/orchid/midi_host.py` | Shift+OCT\|MOD and virtual MIDI |
-| `firmware/boundaries.py` | Addresses that must not change, empty patch manifest |
+| `firmware/boundaries.py` | Addresses that must not change, verified hashes |
+| `firmware/coexist.py` | Rejects an Orchid patch that would overwrite SuperFreaker |
+| `docs/SUPERFREAKER.md` | What SuperFreaker 0.1.2 changed, and how both can coexist |
 | `docs/MILESTONES.md` | What has actually been shown |
 
 Study notes from microfreak-emu, microfreak-tools, and ChoralRoot were used

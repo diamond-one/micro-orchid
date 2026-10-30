@@ -1,10 +1,13 @@
 # Blockers
 
-## Stock firmware image — blocked
+## Stock firmware image — identified, not booted
 
-`firmware/stock/` is empty. The emulator cannot boot, and no patch can be
-built, until an official MicroFreak 5.0.0.2084 `.mff` is placed there.
-Downloading a firmware image from an unofficial source is out of bounds.
+The user's stock file matches 5.0.0.2084. Container sha256
+`c2b405e3c8565b7b73b4dd06522559458190082a8ba633cc5f1bcc43dc64332c`,
+payload sha256
+`54be2e0b695e2279602513e1a9ed39906408ba221a45e782b61273f0ef55d15f`.
+It stays in Downloads. It is not copied into this repo. The emulator has
+not booted it.
 
 ## Renode, uv, and an ARM toolchain — blocked
 
@@ -19,11 +22,11 @@ vocabulary:
 
 - `0x0807B264` .. `0x0807B367` (259 bytes)
 
-That figure is the tool's claim. It has not been re-measured on an image
-this repo possesses. 259 bytes cannot hold the chord engine in
-`src/orchid/engine.py`. A native port needs a different cave, found by
-disassembly of the real image, or a much smaller hook that calls into a
-region the image actually has free. Neither has been established.
+On the stock image and on SuperFreaker 0.1.2 that cave is byte-identical,
+and SuperFreaker did not change the word-bank table. 259 bytes still cannot
+hold the chord engine. Runs of zero bytes that are also identical in both
+images are inside data tables or misaligned, so they are not a code cave.
+See `docs/SUPERFREAKER.md`.
 
 ## Keyboard events in the emulator — blocked
 

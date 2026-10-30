@@ -2,7 +2,7 @@
 
 | Id | Status | Evidence |
 |---|---|---|
-| M1 Development environment | BLOCKED | Python, Git, and Java are present. uv, Renode, REA, Ghidra, mfreak, and the stock image are not. See `docs/ENVIRONMENT.md`. |
+| M1 Development environment | PARTIAL | Stock 5.0.0.2084 and SuperFreaker 0.1.2 were hashed. uv, Renode, REA, Ghidra, and mfreak are still absent. The image was not booted. |
 | M2 Emulator | BLOCKED | `microfreak-emu` is cloned. It was not booted. Renode is missing and `firmware/stock/` is empty. |
 | M3 Chord engine | PASS | `python scripts/verify_orchid.py` — 39 tests, 0 failures. Covers the four-voice examples, all 12 roots, qualities, extensions, inversions, latch, shared pitches, strum cancel, and arp. |
 | M4 Host MIDI | PASS for the virtual host. Hardware NOT RUN | `tests/test_midi_host.py` drives Shift+OCT\|MOD, chords, release, octave, and channel isolation through `Host`. No MIDI interface was opened. |

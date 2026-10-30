@@ -2,8 +2,8 @@
 
 ## Active
 
-1. Obtain official MicroFreak 5.0.0.2084 `.mff` from the user and hash the
-   payload before any patch work.
+1. Install Renode and an ARM assembler, then boot stock and SuperFreaker
+   without writing either image to a device.
 2. Install uv and Renode, then run the stock `mfemu check` and `mfemu boot`.
 3. With the image in hand, measure free flash. Do not assume the 259-byte
    speech cave is the only gap, and do not assume a zero-filled region is unused.

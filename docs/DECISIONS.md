@@ -48,6 +48,14 @@ Shift alone do not toggle it. Turning the mode off releases every note the
 engine generated and clears latch, inversion, strum, and arp. Nothing is
 written to flash.
 
+## Coexistence with SuperFreaker 0.1.2
+
+The base image for a combined build is SuperFreaker, not stock. Orchid may
+change a byte only when that byte is still equal to stock and
+`firmware.coexist.placement_ok` accepts the range. The SuperFreaker banner
+and its Shift lock stay. Coprocessor images stay equal to stock, which they
+already are in SuperFreaker 0.1.2.
+
 ## What was not copied
 
 ChoralRoot's engine was read. Its C was not imported. The interval numbers

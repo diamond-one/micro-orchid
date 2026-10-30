@@ -2,6 +2,11 @@
 
 No firmware bytes have been changed.
 
+A combined build starts from SuperFreaker 0.1.2 and must pass
+`firmware.coexist.placement_ok` for every written range. Their banner,
+shift-lock handler, and the window at `0x0802B8F0`–`0x0802EF30` stay.
+Details and the measured hashes are in `docs/SUPERFREAKER.md`.
+
 The musical rules to port are `src/orchid/chords.py` and the lifecycle in
 `src/orchid/engine.py`. A patch is only acceptable when all of the following
 are true:

@@ -348,6 +348,15 @@ def boot_and_compare(patched: bytes) -> int:
         arm_text = " ".join(shown)
         print(f"arm text: {shown}  {'PASS' if 'ORCHID ON' in arm_text else 'FAIL'}")
         ok = ("ORCHID ON" in arm_text) and ok
+        shown = []
+        ok = _expect(
+            "arm oct repeat",
+            capture(None, 0, button_frame(OCT_MOD_ID, True), shown),
+            [],
+        ) and ok
+        if any("Range" in item for item in shown):
+            print(f"repeat text: {shown}  FAIL")
+            ok = False
         ok = _expect("arm key lift", capture(None, 0, key_frame(12, False)), []) and ok
         armed = pairs(shortcut.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
         ok = _expect(

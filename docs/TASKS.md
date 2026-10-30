@@ -2,8 +2,8 @@
 
 ## Active
 
-1. Read the independent review of the eight patch ranges and keep the
-   recipe in `docs/RELEASE.md` aligned with it. Flash stays unauthorized.
+1. Flash stays unauthorized. The eight ranges were accepted. The payload
+   stays out of the repository.
 
 ## Completed
 
@@ -16,7 +16,7 @@
   Mailbox op 7 arms the layout: indexes 0-11 are modifiers and 12-24 are
   roots. Unarmed, the key stays one stock note.
 - Orchid Mode in the speech tail. Retires the last 21 words of bank 4
-  (size `0xC6`, code at `0x0807A16C`, 4,493 bytes, ends `0x0807B2F9`).
+  (size `0xC6`, code at `0x0807A16C`, 4,545 bytes, ends `0x0807B32D`).
   Branches from the MIDI channel callback at `0x080478EA`, the key-note
   call at `0x0803AD9E`, and the button edges at `0x0804348C` and
   `0x080434A4`. Both stack tops (`0x0800C000` and `0x0805F884`) move to

@@ -31,6 +31,21 @@ static unsigned char shift_down;
 static unsigned char oct_down;
 static unsigned char combo_used;
 static unsigned char swallow_up;
+static unsigned hook_magic;
+
+/* This RAM is the old stack, not stock BSS. A reset does not clear it.
+   The first call zeros the button and voice statics. */
+static void ensure_hooks(void) {
+    if (hook_magic == 0x4F524348u) return;
+    voice_state = 0;
+    voice_port = 0;
+    stock_notes = 0;
+    shift_down = 0;
+    oct_down = 0;
+    combo_used = 0;
+    swallow_up = 0;
+    hook_magic = 0x4F524348u;
+}
 
 static void play(void *state, unsigned msg, unsigned port, unsigned a3, unsigned a4, unsigned a5,
                  struct orchid_event *events, int count) {
@@ -125,6 +140,7 @@ static void handle(void *state, unsigned msg, unsigned port, unsigned a3, unsign
     unsigned velocity = (msg >> 16) & 0xFFu;
     int on = kind == 0x90u && velocity != 0;
     int count;
+    ensure_hooks();
     voice_state = state;
     voice_port = port;
     count = orchid_service(events, 24);
@@ -162,6 +178,7 @@ void orchid_key(void *state, unsigned msg, unsigned port, unsigned a3, unsigned 
    does not run the stock range or mod-track action. Oct|Mod alone still does. */
 __attribute__((used))
 void orchid_button(void *obj, unsigned down, unsigned id, unsigned value) {
+    ensure_hooks();
     if (id == SHIFT_ID) {
         shift_down = down ? 1 : 0;
         if (shift_down && oct_down && !combo_used) {
@@ -182,8 +199,11 @@ void orchid_button(void *obj, unsigned down, unsigned id, unsigned value) {
             return;
         }
         if (!(shift_down && oct_down)) combo_used = 0;
-        if (!down && swallow_up) {
-            swallow_up = 0;
+        /* The down that toggled was not given to stock. A repeat down
+           while Shift stays held must not be given to stock either, or
+           the range path sees a down whose up we then swallow. */
+        if (swallow_up) {
+            if (!down) swallow_up = 0;
             return;
         }
     }

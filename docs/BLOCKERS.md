@@ -13,7 +13,7 @@ it to `main()`. SuperFreaker 0.1.2 booted the same way. See
 ## Assembler — the mode is assembled
 
 clang 23.1.4 targets `thumbv7em-none-eabi`. There is no
-`arm-none-eabi-gcc`. The mode image is 4,493 bytes. The one-word triad
+`arm-none-eabi-gcc`. The mode image is 4,545 bytes. The one-word triad
 hook is still 110 bytes and is not what the boot script writes.
 
 ## Code space — the speech tail is the room
@@ -35,8 +35,8 @@ bytes. Sixteen words free 3,601 and do not fit. Seventeen words free
 words free 4,059. Nineteen words free 4,287 and are 33 bytes short.
 Twenty words free 4,442, and after alignment that is 4,439. The display
 text overflowed that by 54 bytes. Twenty-one words free 4,605. The
-boundary `0x0807A16A` is not 4-byte aligned, so the code is 4,493 bytes
-at `0x0807A16C`–`0x0807B2F9`.
+boundary `0x0807A16A` is not 4-byte aligned, so the code is 4,545 bytes
+at `0x0807A16C`–`0x0807B32D`.
 See `docs/SUPERFREAKER.md`.
 
 ## Keyboard events in the emulator — Oct | Mod is 0x0401

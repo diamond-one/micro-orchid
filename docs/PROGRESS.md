@@ -25,10 +25,10 @@ frame builder. Renode reconstructed both strings.
   ranges in `firmware/superfreaker_v0_1_2_ranges.json`. Coprocessors match
   stock. The speech cave is untouched by SuperFreaker. Their shift-lock
   site is reserved.
-- Measured the mode at 4,493 bytes with `-Oz -flto`. Twenty-one bank-4
+- Measured the mode at 4,545 bytes with `-Oz -flto`. Twenty-one bank-4
   words leave 4,605 bytes. The boundary is `0x0807A16A`, so the code
   starts at the next 4-byte address (`0x0807A16C`) and ends at
-  `0x0807B2F9`. Twenty leave 4,439 usable bytes and were 54 short once
+  `0x0807B32D`. Twenty leave 4,439 usable bytes and were 54 short once
   the display text was added. The image keeps the first word of that
   bank. Colors, numbers, letters, and the four musical voices stay.
 - Measured the key frame on stock firmware under Renode. Subcommand
@@ -63,8 +63,9 @@ frame builder. Renode reconstructed both strings.
   key as one note. Shift then Oct|Mod released the held note, and the
   next press played 60, 64, 67. The same shortcut again released that
   chord, and the next press was one note. The arm step's display frames
-  reconstructed as `ORCHID ON`. The disarm step reconstructed as
-  `ORCHID OFF`. Oct|Mod alone did not draw either string.
+  reconstructed as `ORCHID ON`. A second Oct|Mod down while Shift stayed
+  held produced no notes and did not open Range. The disarm step
+  reconstructed as `ORCHID OFF`. Oct|Mod alone did not draw either string.
 - placement review: the only PC-relative SRAM load at or above `0x2001FE00`
   is the startup stack word at `0x0805F884`, which the patch updates with
   the vector. The next-highest pool word is `0x2001F230`. `placement_ok`
@@ -73,5 +74,7 @@ frame builder. Renode reconstructed both strings.
 
 ## Next
 
-The recipe is `scripts/release_recipe.py`. An independent review of the
-eight ranges is the remaining gate. Do not write an image to a device.
+The eight ranges were accepted. Two defects inside the mode image were
+fixed after that review: a repeated Oct|Mod down is consumed with the
+shortcut, and the button statics are cleared on the first call. Do not
+write an image to a device.

@@ -30,7 +30,7 @@ ranges in `firmware/boundaries.py`. Every byte that differs from
 SuperFreaker has to sit inside those ranges.
 
 One run produced mode image
-`d345023880686bb6f9fc86b4888ab21c62c89557d0bacb5610b007460f060424`.
+`bc069f15f21bc2954e4b84e6907f246f61a7d8a15b1ab666a1954991b4492943`.
 That digest covers the whole 473,695-byte payload. Re-run the script
 after any change to the C sources. A doc-only change does not move it.
 

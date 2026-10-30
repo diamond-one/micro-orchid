@@ -48,8 +48,12 @@ checksum, and key up is subcommand `0x06` with value 0. Stock firmware
 sounds index n as MIDI note n+48. That was measured for indexes 0, 7, 12
 and 24. Shift is `0x0804`. Oct | Mod is `0x0401`: the handler's range
 editor, or its sequencer mod-track path when the sequencer is on.
-Shift plus that button toggles the layout. The button alone keeps the
-stock action. Unarmed, the key is one stock note. The toggle sends
+Shift plus that button toggles the layout. A latched Shift counts as
+held: SuperFreaker's double-tap leaves the stock shift flag set at the
+keyboard object after the button is up, and the shortcut reads that
+flag. The shift-lock handler is not patched. The button alone keeps the
+stock action, including arp range and the sequencer mod track. Unarmed,
+the key is one stock note. The toggle sends
 `ORCHID ON` or `ORCHID OFF` as the panel's existing display frames.
 Renode reconstructed both strings. They stay until the next stock
 redraw. The button alone does not draw them. A key's own aftertouch

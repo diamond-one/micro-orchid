@@ -20,7 +20,11 @@ The inputs stay in Downloads:
 
 `scripts/boot_triad.py` is the emulator proof. It has to reach `main()`,
 match the Python engine, leave key 12 as one note before any button
-frame, and reconstruct `ORCHID ON` then `ORCHID OFF`.
+frame, and reconstruct `ORCHID ON` then `ORCHID OFF`. A fast Shift
+double-tap has to leave the stock shift flag set, and the next
+Oct|Mod has to show `ORCHID ON` rather than the range page. The same
+shortcut has to show `ORCHID ON` while the arpeggiator is on and while
+the sequencer is on, without taking those stock paths.
 
 ## What the recipe prints
 
@@ -30,7 +34,7 @@ ranges in `firmware/boundaries.py`. Every byte that differs from
 SuperFreaker has to sit inside those ranges.
 
 One run produced mode image
-`bc069f15f21bc2954e4b84e6907f246f61a7d8a15b1ab666a1954991b4492943`.
+`35ffe7d37e0b81065d2ec19ca9c42fefea6b585b55f39ac205d83f3426eecdf3`.
 That digest covers the whole 473,695-byte payload. Re-run the script
 after any change to the C sources. A doc-only change does not move it.
 

@@ -7,7 +7,10 @@ branches at the key-note call. Key index n is MIDI note n+48. Mailbox
 op 7 still arms the same layout. Shift plus control `0x0401` toggles it.
 That id is Arp/Range, which is also the sequencer mod-track button.
 The same shortcut sends `ORCHID ON` and `ORCHID OFF` through the panel
-frame builder. Renode reconstructed both strings.
+frame builder. Renode reconstructed both strings. A fast Shift
+double-tap leaves SuperFreaker's lock set, and Oct|Mod then toggles
+the layout instead of opening the range page. The same shortcut shows
+`ORCHID ON` while the arpeggiator is on and while the sequencer is on.
 
 ## Done
 
@@ -25,10 +28,10 @@ frame builder. Renode reconstructed both strings.
   ranges in `firmware/superfreaker_v0_1_2_ranges.json`. Coprocessors match
   stock. The speech cave is untouched by SuperFreaker. Their shift-lock
   site is reserved.
-- Measured the mode at 4,545 bytes with `-Oz -flto`. Twenty-one bank-4
+- Measured the mode at 4,569 bytes with `-Oz -flto`. Twenty-one bank-4
   words leave 4,605 bytes. The boundary is `0x0807A16A`, so the code
   starts at the next 4-byte address (`0x0807A16C`) and ends at
-  `0x0807B32D`. Twenty leave 4,439 usable bytes and were 54 short once
+  `0x0807B345`. Twenty leave 4,439 usable bytes and were 54 short once
   the display text was added. The image keeps the first word of that
   bank. Colors, numbers, letters, and the four musical voices stay.
 - Measured the key frame on stock firmware under Renode. Subcommand

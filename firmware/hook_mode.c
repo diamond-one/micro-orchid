@@ -191,14 +191,18 @@ void orchid_button(void *obj, unsigned down, unsigned id, unsigned value) {
         return;
     }
     if (id == OCT_MOD_ID) {
+        /* A locking Shift-up is already recorded as up, then the stock
+           handler stores that up as still down at keyboard+0x28. The
+           flag is what a latched Shift looks like. */
+        unsigned held = shift_down || ((unsigned char *)obj)[0x28];
         oct_down = down ? 1 : 0;
-        if (shift_down && oct_down && !combo_used) {
+        if (held && oct_down && !combo_used) {
             combo_used = 1;
             swallow_up = 1;
             toggle_mode();
             return;
         }
-        if (!(shift_down && oct_down)) combo_used = 0;
+        if (!(held && oct_down)) combo_used = 0;
         /* The down that toggled was not given to stock. A repeat down
            while Shift stays held must not be given to stock either, or
            the range path sees a down whose up we then swallow. */

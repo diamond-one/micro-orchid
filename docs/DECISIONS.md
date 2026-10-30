@@ -77,8 +77,10 @@ text overflowed those 4,439 usable bytes by 54, so the image now
 retires twenty-one words and keeps the first one (size `0xC6`). The
 boundary `0x0807A16A` is also unaligned, so that image started at
 `0x0807A16C`. The review fixes, clearing the button statics and
-consuming a repeated Oct|Mod down, added 52 bytes. The image is 4,545
-bytes and ends at `0x0807B32D`. Colors, numbers, letters, and the four
+consuming a repeated Oct|Mod down, added 52 bytes (4,545 bytes, ending
+at `0x0807B32D`). Reading the stock shift flag, so a latched Shift
+still toggles, added 24 bytes. The image is 4,569 bytes and ends at
+`0x0807B345`. Colors, numbers, letters, and the four
 musical voices stay. `0x0807B367`–`0x0807C84C` is not placed in. A span
 the reachability walk did not enter is not placed in either. A word is
 removed only when the hook is written into that tail. The downloaded
@@ -114,6 +116,13 @@ button hook, and both are fixed. A second Oct|Mod down while Shift stays held is
 the shortcut, so the stock range path does not see a down whose up is
 swallowed. The button and voice statics live in the old stack, which
 startup does not clear, so the first call zeros them.
+
+A SuperFreaker double-tap of Shift sets the lock and leaves the stock
+shift flag at keyboard+`0x28` set after the button is up. The shortcut
+was watching only its own edge, so the next Oct|Mod opened the range
+editor. It now treats that flag as Shift held. The shift-lock handler
+at `0x080387A4` is not patched. Pressure, a power-on level, and
+clearing the OLED from SysTick stay out.
 
 ## What was not copied
 

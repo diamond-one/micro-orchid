@@ -46,7 +46,7 @@ PATCH_MANIFEST: list[dict[str, object]] = [
     {"start": 0x080434A4, "end": 0x080434A8, "what": "bl to the button hook, up"},
     {"start": 0x0805F884, "end": 0x0805F888, "what": "startup stack top"},
     {"start": 0x0807885C, "end": 0x08078860, "what": "bank 4 size, 21 words retired"},
-    {"start": 0x0807A16C, "end": 0x0807B32D, "what": "Orchid mode"},
+    {"start": 0x0807A16C, "end": 0x0807B345, "what": "Orchid mode"},
 ]
 
 

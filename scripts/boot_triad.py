@@ -33,7 +33,7 @@ from firmware.triad import (  # noqa: E402
     changed_spans,
     compile_mode,
 )
-from firmware.keys import OCT_MOD_ID, SHIFT_ID, button_frame, key_frame  # noqa: E402
+from firmware.keys import ARP_ID, OCT_MOD_ID, SHIFT_ID, button_frame, key_frame  # noqa: E402
 from orchid.engine import Engine  # noqa: E402
 from orchid.layout import Key  # noqa: E402
 from scripts.inspect_firmware import load_mff, payload  # noqa: E402
@@ -118,6 +118,18 @@ def _expect(label: str, words: list[int], events: list[tuple[str, int]]) -> bool
     ok = got == events
     print(f"{label}: got {got}  engine {events}  {'PASS' if ok else 'FAIL'}")
     return ok
+
+
+def _edges(*steps: tuple[int, bool]) -> list[int]:
+    data: list[int] = []
+    for ident, down in steps:
+        data += button_frame(ident, down)
+    return data
+
+
+def _range_page(shown: list[str]) -> bool:
+    """The range editor draws a short value such as '2s' and a digit."""
+    return any(len(item) <= 3 and (item.endswith("s") or item.isdigit()) for item in shown)
 
 
 def boot_and_compare(patched: bytes) -> int:
@@ -387,6 +399,129 @@ def boot_and_compare(patched: bytes) -> int:
             capture(None, 1, key_frame(12, True, VELOCITY)),
             [("on", ROOT_NOTE)],
         ) and ok
+
+        def read_byte(addr: int) -> int:
+            return synth.monitor_read("sysbus ReadByte 0x%08X" % addr) or 0
+
+        # The last shortcut left Shift and Oct|Mod down, and key 12 held.
+        ok = _expect(
+            "tidy",
+            capture(None, 1, _edges((OCT_MOD_ID, False), (SHIFT_ID, False)) + key_frame(12, False)),
+            [("off", ROOT_NOTE)],
+        ) and ok
+
+        shown = []
+        ok = _expect(
+            "shift latch",
+            capture(None, 0, _edges(
+                (SHIFT_ID, True), (SHIFT_ID, False),
+                (SHIFT_ID, True), (SHIFT_ID, False),
+            ), shown),
+            [],
+        ) and ok
+        lock = read_byte(0x20004450)
+        flag = read_byte(0x2000456C)
+        print(f"latch lock {lock} flag {flag} screen {shown}  "
+              f"{'PASS' if lock == 1 and flag == 1 else 'FAIL'}")
+        ok = (lock == 1 and flag == 1) and ok
+        shown = []
+        ok = _expect(
+            "latched oct",
+            capture(None, 0, button_frame(OCT_MOD_ID, True), shown),
+            [],
+        ) and ok
+        latched_text = " ".join(shown)
+        latched_ok = "ORCHID ON" in latched_text and not _range_page(shown)
+        print(f"latched oct text: {shown}  {'PASS' if latched_ok else 'FAIL'}")
+        ok = latched_ok and ok
+        held = Engine()
+        chord = pairs(held.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
+        ok = _expect(
+            "latched key",
+            capture(None, len(chord), key_frame(12, True, VELOCITY)),
+            chord,
+        ) and ok
+        lifted = pairs(held.root_up(ROOT_NOTE))
+        ok = _expect(
+            "latched key up",
+            capture(None, len(lifted), key_frame(12, False)),
+            lifted,
+        ) and ok
+
+        shown = []
+        ok = _expect(
+            "latch disarm",
+            capture(None, 0, _edges(
+                (OCT_MOD_ID, False), (SHIFT_ID, True), (SHIFT_ID, False),
+                (SHIFT_ID, True), (OCT_MOD_ID, True),
+            ), shown),
+            [],
+        ) and ok
+        unlocked = read_byte(0x20004450) == 0
+        print(f"latch disarm text: {shown}  "
+              f"{'PASS' if 'ORCHID OFF' in ' '.join(shown) and unlocked else 'FAIL'}")
+        ok = ("ORCHID OFF" in " ".join(shown)) and unlocked and ok
+
+        shown = []
+        ok = _expect(
+            "arp enable",
+            capture(None, 0, _edges(
+                (OCT_MOD_ID, False), (SHIFT_ID, False),
+                (ARP_ID, True), (ARP_ID, False),
+            ), shown),
+            [],
+        ) and ok
+        arp_on = any("Arpeggiator" in item for item in shown) and read_byte(0x2000370A) == 0
+        print(f"arp enable text: {shown}  {'PASS' if arp_on else 'FAIL'}")
+        ok = arp_on and ok
+        shown = []
+        ok = _expect(
+            "arp range",
+            capture(None, 0, button_frame(OCT_MOD_ID, True), shown),
+            [],
+        ) and ok
+        range_ok = _range_page(shown) and "ORCHID ON" not in " ".join(shown)
+        print(f"arp range text: {shown}  {'PASS' if range_ok else 'FAIL'}")
+        ok = range_ok and ok
+        shown = []
+        ok = _expect(
+            "arp shortcut",
+            capture(None, 0, _edges(
+                (OCT_MOD_ID, False), (SHIFT_ID, True), (OCT_MOD_ID, True),
+            ), shown),
+            [],
+        ) and ok
+        arp_cut = "ORCHID ON" in " ".join(shown) and not _range_page(shown)
+        print(f"arp shortcut text: {shown}  {'PASS' if arp_cut else 'FAIL'}")
+        ok = arp_cut and ok
+
+        shown = []
+        ok = _expect(
+            "seq enable",
+            capture(None, 0, _edges(
+                (OCT_MOD_ID, False), (SHIFT_ID, False),
+                (SHIFT_ID, True), (OCT_MOD_ID, True),
+                (OCT_MOD_ID, False), (SHIFT_ID, False),
+                (SHIFT_ID, True), (ARP_ID, True), (ARP_ID, False), (SHIFT_ID, False),
+            ), shown),
+            [],
+        ) and ok
+        seq_on = any("Sequencer" in item for item in shown) and read_byte(0x2000370A) == 1
+        print(f"seq enable text: {shown}  {'PASS' if seq_on else 'FAIL'}")
+        ok = seq_on and ok
+        shown = []
+        ok = _expect(
+            "seq shortcut",
+            capture(None, 0, _edges((SHIFT_ID, True), (OCT_MOD_ID, True)), shown),
+            [],
+        ) and ok
+        seq_cut = (
+            "ORCHID ON" in " ".join(shown)
+            and not _range_page(shown)
+            and read_byte(0x2000370A) == 1
+        )
+        print(f"seq shortcut text: {shown}  {'PASS' if seq_cut else 'FAIL'}")
+        ok = seq_cut and ok
         return 0 if ok else 1
 
 

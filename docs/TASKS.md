@@ -7,6 +7,12 @@
 
 ## Completed
 
+- Shift latch. A fast double-tap sets SuperFreaker's lock and the
+  stock shift flag. Oct|Mod then shows `ORCHID ON` and key 12 plays
+  the triad. The shift-lock handler is not patched. With the
+  arpeggiator on, Oct|Mod alone still opens the range page and the
+  shortcut shows `ORCHID ON`. With the sequencer on, the shortcut
+  shows `ORCHID ON` and leaves the sequencer selected.
 - Panel text. Shift plus `0x0401` sends `ORCHID ON`, and the same
   shortcut sends `ORCHID OFF`, through the frame builder at
   `0x080226D0`. Renode reconstructed both strings. The button alone
@@ -16,7 +22,7 @@
   Mailbox op 7 arms the layout: indexes 0-11 are modifiers and 12-24 are
   roots. Unarmed, the key stays one stock note.
 - Orchid Mode in the speech tail. Retires the last 21 words of bank 4
-  (size `0xC6`, code at `0x0807A16C`, 4,545 bytes, ends `0x0807B32D`).
+  (size `0xC6`, code at `0x0807A16C`, 4,569 bytes, ends `0x0807B345`).
   Branches from the MIDI channel callback at `0x080478EA`, the key-note
   call at `0x0803AD9E`, and the button edges at `0x0804348C` and
   `0x080434A4`. Both stack tops (`0x0800C000` and `0x0805F884`) move to

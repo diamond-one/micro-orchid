@@ -15,6 +15,9 @@ SHIFT_ID = 0x0804
 # sequencer mod-track path when the sequencer is on. That is the Oct | Mod
 # button: it changes arp range, and it selects a seq mod track.
 OCT_MOD_ID = 0x0401
+# Arp | Seq enable. Alone it toggles the arpeggiator. With Shift it
+# switches the arpeggiator and the sequencer.
+ARP_ID = 0x0400
 
 
 def stock_note(index: int) -> int:

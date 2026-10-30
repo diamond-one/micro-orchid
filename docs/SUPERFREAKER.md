@@ -46,6 +46,50 @@ The speech-vocabulary table at `0x08078838` is unchanged, and the 259-byte
 cave at `0x0807B264` is unchanged. SuperFreaker did not use the cave
 `microfreak-tools` uses for its own patches.
 
+## Where room actually is
+
+A walk of reachable Thumb code, plus every address a PC-relative load
+reads, does not leave an unused hole. The spans that walk misses still
+disassemble as code: the largest ones contain `push` prologues or `bl`.
+They are routines the walk did not reach. Treating a `push` encoding as a
+new function start also decodes speech data as code, and the tail of a
+live table then looks empty. One of those false holes was
+`0x0807B5E0`–`0x0807BCBC`, inside the seven objects that start at
+`0x0807B368`. That range stays forbidden.
+
+The five banks are packed. On SuperFreaker 0.1.2 the descriptor is:
+
+| Bank | Pointer | Size | Words |
+|---|---|---|---|
+| 0 | `0x08078860` | 1233 | 7 |
+| 1 | `0x08078D34` | 900 | 11 |
+| 2 | `0x080790B8` | 1552 | 26 |
+| 3 | `0x080796C8` | 2524 | 26 |
+| 4 | `0x0807A0A4` | 4802 | 22 |
+
+Word counts come from `word_byte_offsets` in microfreak-tools `396fcf4`.
+Nothing loads an address inside a bank directly. The loader stops at the
+size in the descriptor, so the tail of a shortened bank is the writable
+room. Bank 4's last word is 258 bytes. Retiring it, and stopping at
+`0x0807B367`, is 259 bytes: `0x0807B264`–`0x0807B367`. That is the existing
+cave, not a separate hole.
+
+Retiring more whole words of bank 4, and writing the new size back into
+the descriptor, is the way to get more than 259 bytes:
+
+| Words retired | Room |
+|---|---|
+| 1 | 259 |
+| 2 | 450 |
+| 3 | 684 |
+| 4 | 971 |
+| 6 | 1371 |
+| 8 | 1831 |
+
+The cut has to land on a word boundary. A mid-word size leaves a partial
+bitstream. Each retired word is a factory speech word that no longer
+plays. `0x0807B367`–`0x0807C84C` stays untouched.
+
 ## Living together
 
 An Orchid build that should keep SuperFreaker has to start from the

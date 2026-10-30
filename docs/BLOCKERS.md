@@ -15,19 +15,21 @@ it to `main()`. SuperFreaker 0.1.2 booted the same way. See
 clang 23.1.4 can target `thumbv7em-none-eabi`. There is no
 `arm-none-eabi-gcc`. No Orchid instruction has been assembled or placed.
 
-## Code space — blocked, with a documented reason
+## Code space — the speech tail is the room
 
-`microfreak-tools` `patching.py` at the pinned commit says the 5.0.0.2084
-image has no free flash. The cave it uses is the tail of the speech
-vocabulary:
+There is no unused hole in the SuperFreaker image. Spans a reachability
+walk does not enter still disassemble as code. The writable room is the
+tail of speech bank 4, after its size in the descriptor at `0x08078838`
+is shortened to a word boundary.
+
+Retiring the last word frees the existing cave:
 
 - `0x0807B264` .. `0x0807B367` (259 bytes)
 
-On the stock image and on SuperFreaker 0.1.2 that cave is byte-identical,
-and SuperFreaker did not change the word-bank table. 259 bytes still cannot
-hold the chord engine. Runs of zero bytes that are also identical in both
-images are inside data tables or misaligned, so they are not a code cave.
-See `docs/SUPERFREAKER.md`.
+That range is byte-identical on stock and SuperFreaker 0.1.2. Two retired
+words free 450 bytes; three free 684. The full chord engine still does not
+fit in 259. The smallest hook, one root becoming one chord, is the next
+thing to size against that budget. See `docs/SUPERFREAKER.md`.
 
 ## Keyboard events in the emulator — blocked
 

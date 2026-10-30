@@ -42,7 +42,8 @@ def _firmware() -> dict:
             "status": "BLOCKED",
             "detail": (
                 "Stock 5.0.0.2084 was hashed outside this repo and is not "
-                "copied here. Renode has not booted it."
+                "copied here. A separate Renode boot reached main(); this "
+                "script does not repeat that boot."
             ),
             "expected_mff_sha256": STOCK_MFF_SHA256,
             "expected_payload_sha256": STOCK_PAYLOAD_SHA256,
@@ -65,9 +66,10 @@ def main() -> int:
     native = {
         "status": "BLOCKED",
         "detail": (
-            "No patched image. microfreak-tools documents about 259 bytes of "
-            "cave in the speech vocabulary, which cannot hold this chord engine. "
-            "Bootloader and factory data were not modified. Manifest is empty."
+            "No patched image. Measured room is the speech-bank tail: 259 bytes "
+            "after retiring the last word of bank 4, which cannot hold this "
+            "chord engine. Bootloader and factory data were not modified. "
+            "Manifest is empty."
         ),
         "manifest_entries": len(PATCH_MANIFEST),
     }

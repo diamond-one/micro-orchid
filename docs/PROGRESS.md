@@ -1,8 +1,8 @@
 # Progress
 
 Phase: C and D are implemented and tested. Stock 5.0.0.2084 and SuperFreaker
-0.1.2 both reach `main()` under Renode 1.17. A native patch is still blocked
-on a code cave larger than 259 bytes that does not collide with SuperFreaker.
+0.1.2 both reach `main()` under Renode 1.17. Free flash was measured: the
+only room is the speech-bank tail. A native patch is not built yet.
 
 ## Done
 
@@ -11,7 +11,7 @@ on a code cave larger than 259 bytes that does not collide with SuperFreaker.
 - Cloned microfreak-emu `9f80bc3`, microfreak-tools `396fcf4`, and
   ChoralRoot `bd7f431` under `third_party/` (gitignored).
 - Implemented `src/orchid/chords.py`, `engine.py`, `layout.py`, `midi_host.py`.
-- 39 unit tests passed via `python scripts/verify_orchid.py`.
+- 47 unit tests passed via `python -m unittest discover -s tests`.
 - Recorded the empty patch manifest and the addresses that must stay untouched.
 
 - Verified the stock `.mff` container and payload hashes.
@@ -21,8 +21,9 @@ on a code cave larger than 259 bytes that does not collide with SuperFreaker.
 
 ## Not done
 
-- A code cave larger than the 259-byte speech tail, accepted by
-  `firmware/coexist.py`, and shown by disassembly to be unused.
+- The smallest hook: one root becomes one chord through the note path,
+  placed in the 259-byte speech tail or in a larger tail made by retiring
+  more whole words of bank 4.
 - Any keyboard-frame injector for the 25 keys.
 - Any changed firmware byte. No Orchid image exists.
 
@@ -30,7 +31,7 @@ on a code cave larger than 259 bytes that does not collide with SuperFreaker.
 
 `python scripts/verify_orchid.py`
 
-- unit tests: PASS (39 ran, 0 failed, 0 errors)
+- unit tests: PASS (47 ran, 0 failed, 0 errors)
 - stock firmware boot: PASS (`main()` at 6,915,574 instructions, PC `0x08023444`)
 - SuperFreaker 0.1.2 boot: PASS (`main()` at 6,915,727 instructions, PC `0x08024FB6`)
 - native patch: BLOCKED
@@ -38,7 +39,8 @@ on a code cave larger than 259 bytes that does not collide with SuperFreaker.
 
 ## Next
 
-Find a placement `firmware/coexist.py` accepts that is larger than 259 bytes,
-and show from the disassembly that the firmware does not execute it. Then
-assemble the smallest hook: one root key becomes one chord through the
-firmware note path. Boot that third image. Do not write it to a device.
+Assemble the smallest hook: one root key becomes one chord through the
+firmware note path. Place it in `0x0807B264`–`0x0807B367` if it fits. If
+it does not, retire more whole words of bank 4 and update that bank's size.
+Boot that third image. Do not write it to a device. Do not use a span the
+reachability walk missed; those spans are still code.

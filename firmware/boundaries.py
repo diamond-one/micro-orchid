@@ -2,7 +2,7 @@
 
 These addresses come from the public microfreak-emu notes for firmware
 5.0.0.2084. The stock and SuperFreaker hashes below were checked against
-the user's files. This repository has not executed either image. The patch
+the user's files. Both images have been booted under Renode. The patch
 manifest stays empty until a patch is built.
 
 No function here writes a device.
@@ -15,8 +15,9 @@ BOOTLOADER = (0x08000000, 0x08008000)
 FACTORY_DATA = (0x08008000, 0x0800C000)
 APPLICATION = (0x0800C000, 0x08080000)
 
-# microfreak-tools patching.py: the only cave it documents is the tail of
-# the speech vocabulary. Claimed, not re-measured against an image we hold.
+# Tail of speech bank 4 after its last word is retired. Re-measured on
+# SuperFreaker 0.1.2: that word is 258 bytes, and the region ends at
+# 0x0807B367, which is 259 bytes of room. See docs/SUPERFREAKER.md.
 SPEECH_CODE_CAVE = (0x0807B264, 0x0807B367)
 
 # Checked against the user's MicroFreak_Firmware_Update_5_0_0_2084.mff.

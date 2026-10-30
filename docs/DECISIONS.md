@@ -56,6 +56,15 @@ change a byte only when that byte is still equal to stock and
 and its Shift lock stay. Coprocessor images stay equal to stock, which they
 already are in SuperFreaker 0.1.2.
 
+## Placement
+
+There is no erased hole in the SuperFreaker image. Orchid code goes in the
+tail of speech bank 4, after that bank's size at `0x08078838` is shortened
+to a word boundary. The first retired word is the existing 259-byte cave.
+More room means retiring more whole words, which drops factory speech.
+`0x0807B367`–`0x0807C84C` is not placed in. A span the reachability walk
+did not enter is not placed in either.
+
 ## What was not copied
 
 ChoralRoot's engine was read. Its C was not imported. The interval numbers

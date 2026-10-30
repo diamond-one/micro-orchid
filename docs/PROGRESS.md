@@ -1,8 +1,8 @@
 # Progress
 
-Phase: C and D are implemented and tested. Stock 5.0.0.2084 and SuperFreaker
-0.1.2 both reach `main()` under Renode 1.17. Free flash was measured: the
-only room is the speech-bank tail. A native patch is not built yet.
+Phase: the major-triad hook is in firmware and matched the Python engine
+under Renode. Stock 5.0.0.2084 and SuperFreaker 0.1.2 both still reach
+`main()`. The rest of Orchid Mode is not in the image.
 
 ## Done
 
@@ -11,8 +11,8 @@ only room is the speech-bank tail. A native patch is not built yet.
 - Cloned microfreak-emu `9f80bc3`, microfreak-tools `396fcf4`, and
   ChoralRoot `bd7f431` under `third_party/` (gitignored).
 - Implemented `src/orchid/chords.py`, `engine.py`, `layout.py`, `midi_host.py`.
-- 47 unit tests passed via `python -m unittest discover -s tests`.
-- Recorded the empty patch manifest and the addresses that must stay untouched.
+- 52 unit tests passed via `python -m unittest discover -s tests`.
+- The patch manifest lists the triad hook's three ranges. No firmware bytes.
 
 - Verified the stock `.mff` container and payload hashes.
 - Diffed SuperFreaker 0.1.2: 5,705 bytes, main image only. Recorded the
@@ -21,26 +21,24 @@ only room is the speech-bank tail. A native patch is not built yet.
 
 ## Not done
 
-- The smallest hook: one root becomes one chord through the note path,
-  placed in the 259-byte speech tail or in a larger tail made by retiring
-  more whole words of bank 4.
+- Qualities, extensions, inversions, latch, strum, and arp in firmware.
+  They do not fit in the 259 bytes this one word freed.
 - Any keyboard-frame injector for the 25 keys.
-- Any changed firmware byte. No Orchid image exists.
+- A stored Orchid image. The booted payload was a temp file. The downloads
+  were not modified.
 
 ## Latest test
 
-`python scripts/verify_orchid.py`
+`python -m unittest discover -s tests` and `python scripts/boot_triad.py`
 
-- unit tests: PASS (47 ran, 0 failed, 0 errors)
+- unit tests: PASS (52 ran, 0 failed, 0 errors)
 - stock firmware boot: PASS (`main()` at 6,915,574 instructions, PC `0x08023444`)
 - SuperFreaker 0.1.2 boot: PASS (`main()` at 6,915,727 instructions, PC `0x08024FB6`)
-- native patch: BLOCKED
+- triad image: PASS. MIDI note 60 on and off produced 60, 64, 67, matching `spell(60)`.
 - hardware flash: NOT RUN
 
 ## Next
 
-Assemble the smallest hook: one root key becomes one chord through the
-firmware note path. Place it in `0x0807B264`–`0x0807B367` if it fits. If
-it does not, retire more whole words of bank 4 and update that bank's size.
-Boot that third image. Do not write it to a device. Do not use a span the
-reachability walk missed; those spans are still code.
+The panel key ids still have to come from a trace. The rest of Orchid Mode
+needs more than the one retired word, which is a separate decision. Do not
+write an image to a device.

@@ -15,8 +15,13 @@ from firmware.boundaries import (
 
 
 class SafetyTests(unittest.TestCase):
-    def test_patch_manifest_is_empty(self):
-        self.assertEqual(PATCH_MANIFEST, [])
+    def test_patch_manifest_stays_inside_the_application(self):
+        self.assertEqual(len(PATCH_MANIFEST), 3)
+        for item in PATCH_MANIFEST:
+            start, end = int(item["start"]), int(item["end"])
+            self.assertGreater(end, start)
+            self.assertFalse(protected(start))
+            self.assertTrue(APPLICATION[0] <= start and end <= APPLICATION[1])
 
     def test_bootloader_and_factory_data_are_protected(self):
         self.assertTrue(protected(BOOTLOADER[0]))

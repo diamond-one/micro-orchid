@@ -66,10 +66,8 @@ def main() -> int:
     native = {
         "status": "BLOCKED",
         "detail": (
-            "No patched image. Measured room is the speech-bank tail: 259 bytes "
-            "after retiring the last word of bank 4, which cannot hold this "
-            "chord engine. Bootloader and factory data were not modified. "
-            "Manifest is empty."
+            "The triad hook is assembled. This script does not boot it. "
+            "Bootloader and factory data were not modified."
         ),
         "manifest_entries": len(PATCH_MANIFEST),
     }

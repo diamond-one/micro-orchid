@@ -1,6 +1,8 @@
 # Native integration
 
-No firmware bytes have been changed.
+The mode image is built in a temp file from SuperFreaker 0.1.2. The
+downloaded `.mff` files are not modified, and the payload is not stored
+in this repo. `scripts/boot_triad.py` is the boot.
 
 A combined build starts from SuperFreaker 0.1.2 and must pass
 `firmware.coexist.placement_ok` for every written range. Their banner,
@@ -22,13 +24,14 @@ are true:
 - `tests` still pass, and an emulator test shows one root event plus the
   selected modifiers producing the expected notes from the firmware process.
 
-`microfreak-tools` documents a 259-byte cave at `0x0807B264`. That is not
-large enough for this engine. See `docs/BLOCKERS.md`.
+`microfreak-tools` documents a 259-byte cave at `0x0807B264`. The mode
+does not fit there. It retires 17 words of bank 4 and links at
+`0x0807A440`. See `docs/BLOCKERS.md`.
 
-The first useful emulator test, after a boot of unmodified firmware, is a
-single root producing C E G through the firmware's own note path. Modifier
-keys come after that. Shift+OCT|MOD comes after the OCT | MOD control id is
-known. The bootloader recovery chord is not a test we are allowed to weaken.
+`scripts/boot_triad.py` already shows one root, modifiers, latch, strum,
+and arp through the firmware note path. Shift+OCT|MOD waits on the
+OCT | MOD control id. The bootloader recovery chord is not a test we
+are allowed to weaken.
 
 Panel frames that are already documented, and only these, may be reused:
 USART2, 8 bytes, `AA` plus six payload bytes plus an 8-bit sum. Button down

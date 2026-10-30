@@ -121,5 +121,11 @@ contain that toggle.
 The unmodified SuperFreaker image boots: Renode 1.17 reached its
 `main()` at 6,915,727 instructions. The mode image, built in a temp
 file from that payload, also reached `main()` and matched the Python
-engine on major, inversion, panic, minor, and a minor seventh. The
-downloads were not modified.
+engine on major, inversion, panic, minor, a minor seventh, latch,
+strum, and arp. The downloads were not modified.
+
+The lowered stack was checked against PC-relative loads. The only one
+at or above `0x2001FE00` is the startup word at `0x0805F884`, and the
+patch writes `0x2001FE00` there and in the vector at `0x0800C000`. The
+highest other pool word is `0x2001F230`. Words that merely look like
+higher SRAM addresses sit inside instructions and are not pools.

@@ -1,7 +1,7 @@
-"""Boot the triad image and compare its notes with the Python engine.
+"""Boot the mode image and compare its notes with the Python engine.
 
-Builds a payload from SuperFreaker, retires bank 4's last word, and
-places the major-triad hook. Writes that payload to a temp file.
+Builds a payload from SuperFreaker, retires 17 words of speech bank 4,
+and places the chord mode. Writes that payload to a temp file.
 Does not modify the downloaded .mff and does not write a device.
 
     python scripts/boot_triad.py
@@ -125,6 +125,10 @@ def boot_and_compare(patched: bytes) -> int:
         def capture(message: list[int], expect: int) -> list[int]:
             before = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
             synth.send(message)
+            if expect == 0:
+                time.sleep(2.5)
+                text = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
+                return _voices(text[len(before):])
             end = time.time() + 45
             latest: list[int] = []
             while time.time() < end:
@@ -156,6 +160,53 @@ def boot_and_compare(patched: bytes) -> int:
         seventh = pairs(engine.modifier_down(Key.MIN7))
         mail(1, 5)
         ok = _expect("minor seventh", capture([0x80, 2, 0x40], len(seventh)), seventh) and ok
+
+        cleared = pairs(engine.panic())
+        mail(6)
+        ok = _expect("clear", capture([0x80, 3, 0x40], len(cleared)), cleared) and ok
+        engine.modifier_down(Key.MIN)
+        mail(1, 1)
+        ok = _expect("latch arm", capture([0x80, 4, 0x40], 0), []) and ok
+        engine.set_latch(True)
+        mail(3, 1)
+        ok = _expect("latch on", capture([0x80, 5, 0x40], 0), []) and ok
+        engine.modifier_up(Key.MIN)
+        mail(2, 1)
+        ok = _expect("quality up", capture([0x80, 6, 0x40], 0), []) and ok
+        latched = pairs(engine.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
+        ok = _expect("latched minor", capture([0x90, ROOT_NOTE, VELOCITY], len(latched)), latched) and ok
+        unlatched = pairs(engine.set_latch(False))
+        mail(3, 0)
+        ok = _expect("latch off", capture([0x80, 7, 0x40], len(unlatched)), unlatched) and ok
+
+        cleared = pairs(engine.panic())
+        mail(6)
+        ok = _expect("clear for strum", capture([0x80, 8, 0x40], len(cleared)), cleared) and ok
+        engine.modifier_down(Key.STRUM)
+        mail(1, 10)
+        ok = _expect("strum on", capture([0x80, 9, 0x40], 0), []) and ok
+        strum_root = pairs(engine.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
+        ok = _expect("strum root", capture([0x90, ROOT_NOTE, VELOCITY], len(strum_root)), strum_root) and ok
+        strum_step = pairs(engine.advance(30))
+        mail(5, 30)
+        ok = _expect("strum step", capture([0x80, 10, 0x40], len(strum_step)), strum_step) and ok
+        strum_stop = pairs(engine.root_up(ROOT_NOTE))
+        ok = _expect("strum release", capture([0x80, ROOT_NOTE, 0x40], len(strum_stop)), strum_stop) and ok
+        engine.advance(100)
+        mail(5, 100)
+        ok = _expect("strum cancelled", capture([0x80, 11, 0x40], 0), []) and ok
+
+        cleared = pairs(engine.panic())
+        mail(6)
+        ok = _expect("clear for arp", capture([0x80, 12, 0x40], len(cleared) if cleared else 0), cleared) and ok
+        engine.modifier_down(Key.ARP)
+        mail(1, 11)
+        ok = _expect("arp on", capture([0x80, 13, 0x40], 0), []) and ok
+        arp_root = pairs(engine.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
+        ok = _expect("arp root", capture([0x90, ROOT_NOTE, VELOCITY], len(arp_root)), arp_root) and ok
+        arp_step = pairs(engine.advance(120))
+        mail(5, 120)
+        ok = _expect("arp step", capture([0x80, 14, 0x40], len(arp_step)), arp_step) and ok
         return 0 if ok else 1
 
 

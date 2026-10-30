@@ -36,9 +36,17 @@ the code occupies `0x0807A440`–`0x0807B334` and 51 bytes remain. See
 
 ## Keyboard events in the emulator — blocked
 
-`microfreak-emu` does not run the keyboard coprocessor. `mfemu panel` can
-press Shift (`0x0804`) over the documented USART2 frame. It has no id for
-OCT | MOD and no id for the 25 keys. Those ids will not be invented.
+`microfreak-emu` does not run the keyboard coprocessor. The documented
+USART2 frame is 8 bytes: `AA`, then `(chip << 4) | type`, then a payload,
+then an 8-bit sum. Button down from chip `0x20` is `20 01 id_hi id_lo 00 00`.
+`mfemu panel` knows Shift (`0x0804`) and Hold (`0x0204`). It has no id for
+OCT | MOD and no id for the 25 keys.
+
+A search of the stock 5.0.0.2084 main image found UI labels for Octave,
+Arpeggiator, Seq/Arp, and KBD Sensitivity, and no OCT | MOD label and no
+key-number table. The keyboard coprocessor image
+`nanowave_iochip_kbd__fw1_0_1_1857` has no readable strings. Those ids
+will not be invented, and no keyboard parser is in the mode image.
 
 ## Physical flash — not authorized
 

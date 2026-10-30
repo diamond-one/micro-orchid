@@ -27,6 +27,10 @@
 - uv, clang, and Renode 1.17. Stock `mfemu check` is READY. Stock and
   SuperFreaker 0.1.2 both reach `main()` in Renode. No device write.
 - Chord spelling, four-voice reduction, engine lifecycle, virtual host.
+- Latch, strum, and arp on the emulated chip, through the same mailbox.
+  Latch kept a minor chord after the key lift. Strum played the root,
+  then the third, and a release cancelled the fifth. Arp stepped from
+  60 to 64.
 - The same engine in C, checked against the Python cases through a host DLL.
 - Shift+OCT|MOD behavior on the host, including power-on with the combo held.
 - Safety boundaries and the five-range mode manifest.
@@ -34,8 +38,8 @@
 
 ## Waiting
 
-- Latch, strum, and arp driven inside Renode. The code is in the image.
-- A keyboard parser, after a trace supplies the 25 key ids and after more
-  of bank 4 is retired if the parser needs the room.
-- Independent review.
+- A keyboard parser, after a trace supplies the OCT | MOD id and the 25
+  key ids, and after more of bank 4 is retired if the parser needs the room.
+- A second person's review. The five ranges were checked locally against
+  `placement_ok` and the SRAM literal pools.
 - Physical flash. Not authorized.

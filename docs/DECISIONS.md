@@ -72,8 +72,11 @@ retires eighteen words and keeps the first four (size `0x2E8`, code
 `0x0807A38C`–`0x0807B2E0`). The Shift+Oct|Mod hook made the image 4,320
 bytes. Nineteen words are 33 bytes short, so the image now retires
 twenty words and keeps the first two (size `0x169`). The boundary
-`0x0807A20D` is odd, so the code starts at `0x0807A210` and ends at
-`0x0807B2F0`. Colors, numbers, letters, and the four
+`0x0807A20D` is odd, so that image started at `0x0807A210`. The display
+text overflowed those 4,439 usable bytes by 54, so the image now
+retires twenty-one words and keeps the first one (size `0xC6`). The
+boundary `0x0807A16A` is also unaligned, so the 4,493 bytes start at
+`0x0807A16C` and end at `0x0807B2F9`. Colors, numbers, letters, and the four
 musical voices stay. `0x0807B367`–`0x0807C84C` is not placed in. A span
 the reachability walk did not enter is not placed in either. A word is
 removed only when the hook is written into that tail. The downloaded

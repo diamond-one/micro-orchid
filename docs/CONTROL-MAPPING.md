@@ -49,8 +49,9 @@ sounds index n as MIDI note n+48. That was measured for indexes 0, 7, 12
 and 24. Shift is `0x0804`. Oct | Mod is `0x0401`: the handler's range
 editor, or its sequencer mod-track path when the sequencer is on.
 Shift plus that button toggles the layout. The button alone keeps the
-stock action. Unarmed, the key is one stock note. The toggle does not
-yet write `ORCHID ON` or `ORCHID OFF` to the display.
+stock action. Unarmed, the key is one stock note. The toggle sends
+`ORCHID ON` or `ORCHID OFF` as the panel's existing display frames.
+Renode reconstructed both strings. The button alone does not draw them.
 
 ## MIDI channels
 

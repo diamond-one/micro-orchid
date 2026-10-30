@@ -13,7 +13,7 @@ it to `main()`. SuperFreaker 0.1.2 booted the same way. See
 ## Assembler — the mode is assembled
 
 clang 23.1.4 targets `thumbv7em-none-eabi`. There is no
-`arm-none-eabi-gcc`. The mode image is 4,320 bytes. The one-word triad
+`arm-none-eabi-gcc`. The mode image is 4,493 bytes. The one-word triad
 hook is still 110 bytes and is not what the boot script writes.
 
 ## Code space — the speech tail is the room
@@ -33,8 +33,10 @@ does not fit there. A 3,330-byte sketch looked as if fifteen words
 bytes. Sixteen words free 3,601 and do not fit. Seventeen words free
 3,881 and were 45 bytes short once the keyboard entry was added. Eighteen
 words free 4,059. Nineteen words free 4,287 and are 33 bytes short.
-Twenty words free 4,442. The boundary `0x0807A20D` is not 4-byte
-aligned, so the code is 4,320 bytes at `0x0807A210`–`0x0807B2F0`.
+Twenty words free 4,442, and after alignment that is 4,439. The display
+text overflowed that by 54 bytes. Twenty-one words free 4,605. The
+boundary `0x0807A16A` is not 4-byte aligned, so the code is 4,493 bytes
+at `0x0807A16C`–`0x0807B2F9`.
 See `docs/SUPERFREAKER.md`.
 
 ## Keyboard events in the emulator — Oct | Mod is 0x0401
@@ -54,8 +56,9 @@ nonzero. The manual's Oct | Mod button is the control that does those
 two jobs: it changes arp range, and it selects a seq mod track. The
 image branches at the button down and up calls (`0x0804348C` and
 `0x080434A4`). Shift plus that button toggles the layout and does not
-run the stock action. The button alone still does. The OLED does not
-yet show `ORCHID ON` or `ORCHID OFF`.
+run the stock action. The button alone still does. The shortcut sends
+`ORCHID ON` and `ORCHID OFF` through the frame builder at `0x080226D0`.
+Renode reconstructed both strings. The button alone does not draw them.
 
 ## Physical flash — not authorized
 

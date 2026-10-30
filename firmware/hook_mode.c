@@ -7,7 +7,16 @@
 extern void midi_dispatch(void *state, unsigned msg, unsigned port,
                           unsigned a3, unsigned a4, unsigned a5);
 extern void button_handler(void *obj, unsigned down, unsigned id, unsigned value);
+/* Copies the two words as a 6-byte body and calls the frame builder at
+   0x080226D0, then queues the frame on the panel bus. */
+extern void panel_send(void *bus, unsigned lo, unsigned hi, unsigned force);
 extern int orchid_keyboard_on(void);
+
+/* Same bus object the stock UI passes into the sender. */
+#define PANEL_BUS ((void *)0x200005A0)
+
+static const char TEXT_ON[] = "ORCHID ON";
+static const char TEXT_OFF[] = "ORCHID OFF";
 
 /* 0x0401 is Arp/Range. The button handler takes that id to the range editor,
    or to the sequencer-mod path when the sequencer is running. The manual's
@@ -63,6 +72,33 @@ static void release_stock(void) {
     }
 }
 
+/* Body layout the panel already uses: F7, opcode, then up to four
+   characters. 0x70 opens a region, 0x72 carries four characters, and
+   0x71 carries a shorter tail. */
+static void panel_chunk(unsigned opcode, const char *bytes, unsigned count) {
+    unsigned lo = 0xF7u | (opcode << 8);
+    unsigned hi = 0;
+    if (count > 0) lo |= (unsigned)(unsigned char)bytes[0] << 16;
+    if (count > 1) lo |= (unsigned)(unsigned char)bytes[1] << 24;
+    if (count > 2) hi |= (unsigned char)bytes[2];
+    if (count > 3) hi |= (unsigned)(unsigned char)bytes[3] << 8;
+    panel_send(PANEL_BUS, lo, hi, 1);
+}
+
+static void panel_text(const char *text) {
+    unsigned length = 0;
+    unsigned index = 0;
+    while (text[length] != 0) length++;
+    panel_chunk(0x70u, text, 0);
+    while (index < length) {
+        unsigned chunk = length - index;
+        unsigned opcode = chunk >= 4u ? 0x72u : 0x71u;
+        if (chunk > 4u) chunk = 4u;
+        panel_chunk(opcode, text + index, chunk);
+        index += chunk;
+    }
+}
+
 static void toggle_mode(void) {
     struct orchid_event events[24];
     int count;
@@ -73,10 +109,12 @@ static void toggle_mode(void) {
             unsigned status = events[i].kind ? 0x90u : 0x80u;
             emit(status, events[i].note, events[i].velocity);
         }
+        panel_text(TEXT_OFF);
         return;
     }
     release_stock();
     orchid_arm(1, events, 24);
+    panel_text(TEXT_ON);
 }
 
 static void handle(void *state, unsigned msg, unsigned port, unsigned a3, unsigned a4, unsigned a5,

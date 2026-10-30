@@ -6,7 +6,7 @@ bytes. A range is half-open: start is included, end is not.
 
 The speech-vocabulary cave SuperFreaker left alone is still only 259 bytes.
 Landing there does not collide with SuperFreaker. The chord engine does not
-fit in that one word; the mode image retires twenty bank-4 words instead.
+fit in that one word; the mode image retires twenty-one bank-4 words instead.
 """
 
 from __future__ import annotations

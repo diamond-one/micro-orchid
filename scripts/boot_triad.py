@@ -1,6 +1,6 @@
 """Boot the mode image and compare its notes with the Python engine.
 
-Builds a payload from SuperFreaker, retires 20 words of speech bank 4,
+Builds a payload from SuperFreaker, retires 21 words of speech bank 4,
 and places the chord mode. Writes that payload to a temp file.
 Does not modify the downloaded .mff and does not write a device.
 
@@ -82,6 +82,37 @@ def _notes(words: list[int]) -> list[tuple[str, int]]:
     return out
 
 
+def _screens(text: str) -> list[str]:
+    """Regions rebuilt from the frame-builder register hooks."""
+    pending = None
+    frames = []
+    for line in text.splitlines():
+        if " LCD-A " in line:
+            parts = line.rsplit("LCD-A ", 1)[1].split()
+            if len(parts) >= 3:
+                pending = [int(part, 16) for part in parts[:3]]
+        elif " LCD-B " in line and pending is not None:
+            parts = line.rsplit("LCD-B ", 1)[1].split()
+            if len(parts) >= 2:
+                frames.append([0xF7, *pending, *[int(part, 16) for part in parts[:2]]])
+            pending = None
+    texts: list[str] = []
+    cur = None
+    for frame in frames:
+        kind = frame[1]
+        if kind == 0x70:
+            if cur:
+                texts.append(cur)
+            cur = ""
+        elif kind == 0x72 and cur is not None:
+            cur += "".join(chr(c) for c in frame[2:6] if 32 <= c < 127 or c == 10)
+        elif kind == 0x71 and cur is not None:
+            cur += "".join(chr(c) for c in frame[2:5] if 32 <= c < 127)
+    if cur:
+        texts.append(cur)
+    return texts
+
+
 def _expect(label: str, words: list[int], events: list[tuple[str, int]]) -> bool:
     got = _notes(words)
     ok = got == events
@@ -128,8 +159,15 @@ def boot_and_compare(patched: bytes) -> int:
             synth.monitor("sysbus WriteByte 0x2001FF02 %d" % b)
             synth.monitor("sysbus WriteByte 0x2001FF03 1")
 
-        def capture(message: list[int] | None, expect: int, bus: list[int] | None = None) -> list[int]:
+        def capture(message: list[int] | None, expect: int, bus: list[int] | None = None,
+                    screen: list[str] | None = None) -> list[int]:
             before = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
+
+            def finish(text: str) -> list[int]:
+                if screen is not None:
+                    screen[:] = _screens(text[len(before):])
+                return _voices(text[len(before):])
+
             if bus is not None:
                 for byte in bus:
                     synth.monitor("usart2 WriteChar 0x%02X" % byte)
@@ -138,7 +176,7 @@ def boot_and_compare(patched: bytes) -> int:
             if expect == 0:
                 time.sleep(2.5)
                 text = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
-                return _voices(text[len(before):])
+                return finish(text)
             end = time.time() + 45
             latest: list[int] = []
             while time.time() < end:
@@ -147,8 +185,11 @@ def boot_and_compare(patched: bytes) -> int:
                 if len(latest) >= expect:
                     time.sleep(0.8)
                     text = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
-                    return _voices(text[len(before):])
+                    return finish(text)
                 time.sleep(0.4)
+            text = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
+            if screen is not None:
+                screen[:] = _screens(text[len(before):])
             return latest
 
         def pairs(events) -> list[tuple[str, int]]:
@@ -259,7 +300,24 @@ def boot_and_compare(patched: bytes) -> int:
             [("off", ROOT_NOTE)],
         ) and ok
         ok = _expect("shift release", capture(None, 0, button_frame(SHIFT_ID, False)), []) and ok
-        ok = _expect("oct alone", capture(None, 0, button_frame(OCT_MOD_ID, True)), []) and ok
+        print(synth.monitor(
+            'cpu AddHook 0x080226E8 '
+            '"a=int(self.GetRegister(6).RawValue) & 255; '
+            'b=int(self.GetRegister(4).RawValue) & 255; '
+            'c=int(self.GetRegister(5).RawValue) & 255; '
+            "self.Log(LogLevel.Error, 'LCD-A %02X %02X %02X' % (a, b, c))\""
+        ).strip() or "lcd hook a")
+        print(synth.monitor(
+            'cpu AddHook 0x080226F8 '
+            '"d=int(self.GetRegister(4).RawValue) & 255; '
+            'e=int(self.GetRegister(1).RawValue) & 255; '
+            "self.Log(LogLevel.Error, 'LCD-B %02X %02X' % (d, e))\""
+        ).strip() or "lcd hook b")
+        shown: list[str] = []
+        ok = _expect("oct alone", capture(None, 0, button_frame(OCT_MOD_ID, True), shown), []) and ok
+        if any("ORCHID" in item for item in shown):
+            print(f"oct alone text: {shown}  FAIL")
+            ok = False
         ok = _expect("oct release", capture(None, 0, button_frame(OCT_MOD_ID, False)), []) and ok
 
         ok = _expect(
@@ -268,11 +326,15 @@ def boot_and_compare(patched: bytes) -> int:
             [("on", ROOT_NOTE)],
         ) and ok
         ok = _expect("arm shift", capture(None, 0, button_frame(SHIFT_ID, True)), []) and ok
+        shown = []
         ok = _expect(
             "arm oct",
-            capture(None, 1, button_frame(OCT_MOD_ID, True)),
+            capture(None, 1, button_frame(OCT_MOD_ID, True), shown),
             [("off", ROOT_NOTE)],
         ) and ok
+        arm_text = " ".join(shown)
+        print(f"arm text: {shown}  {'PASS' if 'ORCHID ON' in arm_text else 'FAIL'}")
+        ok = ("ORCHID ON" in arm_text) and ok
         ok = _expect("arm key lift", capture(None, 0, key_frame(12, False)), []) and ok
         armed = pairs(shortcut.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
         ok = _expect(
@@ -284,11 +346,15 @@ def boot_and_compare(patched: bytes) -> int:
         ok = _expect("off shift", capture(None, 0, button_frame(SHIFT_ID, False)), []) and ok
         ok = _expect("off oct up", capture(None, 0, button_frame(OCT_MOD_ID, False)), []) and ok
         ok = _expect("off shift down", capture(None, 0, button_frame(SHIFT_ID, True)), []) and ok
+        shown = []
         ok = _expect(
             "off oct",
-            capture(None, len(released), button_frame(OCT_MOD_ID, True)),
+            capture(None, len(released), button_frame(OCT_MOD_ID, True), shown),
             released,
         ) and ok
+        off_text = " ".join(shown)
+        print(f"off text: {shown}  {'PASS' if 'ORCHID OFF' in off_text else 'FAIL'}")
+        ok = ("ORCHID OFF" in off_text) and ok
         ok = _expect(
             "off key lift",
             capture(None, 1, key_frame(12, False)),

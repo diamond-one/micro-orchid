@@ -2,17 +2,21 @@
 
 ## Active
 
-1. Draw `ORCHID ON` and `ORCHID OFF` on the panel display. The shortcut
-   itself is in the image. The screen text is not.
+1. A second person's review of the eight patch ranges. Flash stays
+   unauthorized, and the temp payload is not a release candidate.
 
 ## Completed
 
+- Panel text. Shift plus `0x0401` sends `ORCHID ON`, and the same
+  shortcut sends `ORCHID OFF`, through the frame builder at
+  `0x080226D0`. Renode reconstructed both strings. The button alone
+  still opens the stock screen and does not draw those words.
 - Keyboard frames. Subcommand `0x05` is key down and `0x06` is key up.
   Index n sounds as MIDI note n+48. The mode branches at `0x0803AD9E`.
   Mailbox op 7 arms the layout: indexes 0-11 are modifiers and 12-24 are
   roots. Unarmed, the key stays one stock note.
-- Orchid Mode in the speech tail. Retires the last 20 words of bank 4
-  (size `0x169`, code at `0x0807A210`, 4,320 bytes, ends `0x0807B2F0`).
+- Orchid Mode in the speech tail. Retires the last 21 words of bank 4
+  (size `0xC6`, code at `0x0807A16C`, 4,493 bytes, ends `0x0807B2F9`).
   Branches from the MIDI channel callback at `0x080478EA`, the key-note
   call at `0x0803AD9E`, and the button edges at `0x0804348C` and
   `0x080434A4`. Both stack tops (`0x0800C000` and `0x0805F884`) move to
@@ -42,8 +46,4 @@
 
 ## Waiting
 
-- The two display strings. Shift+Oct|Mod toggles the layout; the OLED
-  text from that toggle is not sent yet.
-- A second person's review. The eight ranges were checked locally against
-  `placement_ok` and the SRAM literal pools.
 - Physical flash. Not authorized.

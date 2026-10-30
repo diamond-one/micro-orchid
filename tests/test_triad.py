@@ -85,7 +85,7 @@ class TriadTests(unittest.TestCase):
         ):
             self.assertTrue(placement_ok(start, end), hex(start))
 
-    def test_mode_fits_in_twenty_retired_words(self):
+    def test_mode_fits_in_twenty_one_retired_words(self):
         code, chord_at, key_at, button_at = compile_mode()
         image = bytearray(_image())
         struct.pack_into("<I", image, VECTOR_SP - BASE, OLD_STACK)

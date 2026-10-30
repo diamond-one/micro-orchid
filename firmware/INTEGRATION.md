@@ -25,15 +25,17 @@ are true:
   selected modifiers producing the expected notes from the firmware process.
 
 `microfreak-tools` documents a 259-byte cave at `0x0807B264`. The mode
-does not fit there. It retires 20 words of bank 4 and links at
-`0x0807A210`. The keyboard note call at `0x0803AD9E` is a second branch.
+does not fit there. It retires 21 words of bank 4 and links at
+`0x0807A16C`. The keyboard note call at `0x0803AD9E` is a second branch.
 The button edges at `0x0804348C` and `0x080434A4` are a third.
 See `docs/BLOCKERS.md`.
 
 `scripts/boot_triad.py` shows one root, modifiers, latch, strum, and arp
 through MIDI, then a key root and a minor modifier. Shift plus control
-`0x0401` toggles that layout. Shift alone and that button alone leave a
-key as one note. The bootloader recovery chord is not a test we are
+`0x0401` toggles that layout and sends `ORCHID ON` or `ORCHID OFF`
+through the frame builder at `0x080226D0`. Shift alone and that button
+alone leave a key as one note, and the button alone does not draw those
+words. The bootloader recovery chord is not a test we are
 allowed to weaken.
 
 Panel frames are USART2, 8 bytes, `AA` plus six payload bytes plus an

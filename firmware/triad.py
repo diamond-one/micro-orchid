@@ -136,11 +136,11 @@ def apply_triad(image: bytes, code: bytes) -> bytearray:
     return out
 
 
-# The full mode retires 20 words of bank 4. The word boundary is
-# 0x0807A0A4 + 0x169 = 0x0807A20D. Code starts on the next 4-byte address.
-MODE_CAVE = 0x0807A210
+# The full mode retires 21 words of bank 4. The word boundary is
+# 0x0807A0A4 + 0xC6 = 0x0807A16A. Code starts on the next 4-byte address.
+MODE_CAVE = 0x0807A16C
 MODE_CAVE_END = 0x0807B367
-MODE_BANK_SIZE = 0x169
+MODE_BANK_SIZE = 0xC6
 STACK_TOP = 0x2001FE00
 VECTOR_SP = 0x0800C000
 STARTUP_SP = 0x0805F884
@@ -229,7 +229,7 @@ def compile_mode(clang: Path | None = None) -> tuple[bytes, int, int, int]:
 
 def apply_mode(image: bytes, code: bytes, chord_offset: int, key_offset: int,
                 button_offset: int) -> bytearray:
-    """Place the full mode, retire 20 speech words, and lower the stack."""
+    """Place the full mode, retire 21 speech words, and lower the stack."""
     if len(image) < STARTUP_SP - BASE + 4:
         raise ValueError("image is shorter than the startup literal")
     if image[HOOK_SITE - BASE:HOOK_SITE - BASE + 4] != encode_bl(HOOK_SITE, DISPATCH):

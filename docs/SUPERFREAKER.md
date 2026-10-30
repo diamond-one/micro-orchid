@@ -91,10 +91,13 @@ the descriptor, is the way to get more than 259 bytes:
 | 18 | 4059 |
 | 19 | 4287 |
 | 20 | 4442 |
+| 21 | 4605 |
 
-Twenty is the current mode: 4,320 bytes, placed at `0x0807A210` because
-the 20-word boundary `0x0807A20D` is not a 4-byte address. Nineteen
-words are 33 bytes short of that image.
+Twenty-one is the current mode: 4,493 bytes, placed at `0x0807A16C`
+because the 21-word boundary `0x0807A16A` is not a 4-byte address.
+Twenty words leave 4,439 usable bytes after alignment, and the display
+text overflowed that by 54. Nineteen words are 33 bytes short of the
+4,320-byte image from before that text.
 
 The cut has to land on a word boundary. A mid-word size leaves a partial
 bitstream. Each retired word is a factory speech word that no longer
@@ -115,9 +118,9 @@ still equal to stock outside SuperFreaker's window.
 - writes the shift-lock handler at `0x080387A4`
 
 The one-word speech cave passes that test. The mode does not fit in it.
-The combined image retires 20 bank-4 words. The word boundary is
-`0x0807A20D`, so the 4,320 bytes start at `0x0807A210` and end at
-`0x0807B2F0`. It also changes the bank-4 size, the channel-callback
+The combined image retires 21 bank-4 words. The word boundary is
+`0x0807A16A`, so the 4,493 bytes start at `0x0807A16C` and end at
+`0x0807B2F9`. It also changes the bank-4 size, the channel-callback
 branch at `0x080478EA`, the key-note branch at `0x0803AD9E`, the button
 edges at `0x0804348C` and `0x080434A4`, and both stack tops.
 `placement_ok` accepts those eight ranges. The toggle does not use

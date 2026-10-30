@@ -66,7 +66,10 @@ at `0x0807B264`–`0x0807B367`. That held the 110-byte major-triad hook.
 The rest of the mode does not fit in one word. The compiled engine is
 3,828 bytes, so the image retires the last 17 words of bank 4 and keeps
 the first five (size `0x39A`, code `0x0807A440`–`0x0807B334`). Sixteen
-words are 227 bytes short. Colors, numbers, letters, and the four
+words are 227 bytes short. Adding the keyboard entry made the image
+3,924 bytes, which is 45 bytes past seventeen words, so the image now
+retires eighteen words and keeps the first four (size `0x2E8`, code
+`0x0807A38C`–`0x0807B2E0`). Colors, numbers, letters, and the four
 musical voices stay. `0x0807B367`–`0x0807C84C` is not placed in. A span
 the reachability walk did not enter is not placed in either. A word is
 removed only when the hook is written into that tail. The downloaded

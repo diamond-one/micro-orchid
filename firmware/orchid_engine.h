@@ -27,11 +27,15 @@ ORCHID_API int orchid_latch(int enabled, struct orchid_event *out, int cap);
 ORCHID_API int orchid_key_mode(int mode, int tonic, struct orchid_event *out, int cap);
 ORCHID_API int orchid_advance(int ms, struct orchid_event *out, int cap);
 ORCHID_API int orchid_panic(struct orchid_event *out, int cap);
+/* Keyboard performance. Off, a key is one stock note. On, indexes 0-11
+   are modifiers and 12-24 are roots. Turning it off releases sounding notes. */
+ORCHID_API int orchid_arm(int on, struct orchid_event *out, int cap);
 ORCHID_API int orchid_held(unsigned char *notes, int cap);
 ORCHID_API int orchid_pending_count(void);
 
 /* Test mailbox. op is applied on the next orchid_service call.
-   1 modifier down, 2 modifier up, 3 latch, 4 key mode, 5 advance, 6 panic. */
+   1 modifier down, 2 modifier up, 3 latch, 4 key mode, 5 advance, 6 panic,
+   7 arm the keyboard layout (a = 1 on, 0 off). */
 ORCHID_API void orchid_command(int op, int a, int b);
 ORCHID_API int orchid_service(struct orchid_event *out, int cap);
 

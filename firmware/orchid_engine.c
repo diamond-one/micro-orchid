@@ -57,6 +57,7 @@ static struct {
     unsigned int now;
     unsigned char sig[MAX_HELD];
     unsigned char sig_n;
+    unsigned char enabled;
     unsigned int magic;
 } S;
 
@@ -685,5 +686,18 @@ ORCHID_API int orchid_service(struct orchid_event *out, int cap) {
     if (op == 4) return orchid_key_mode(a, b, out, cap);
     if (op == 5) return orchid_advance(a | (b << 8), out, cap);
     if (op == 6) return orchid_panic(out, cap);
+    if (op == 7) return orchid_arm(a, out, cap);
     return 0;
+}
+
+ORCHID_API int orchid_arm(int on, struct orchid_event *out, int cap) {
+    ensure();
+    S.enabled = on ? 1 : 0;
+    if (!S.enabled) return orchid_panic(out, cap);
+    return 0;
+}
+
+int orchid_keyboard_on(void) {
+    ensure();
+    return S.enabled;
 }

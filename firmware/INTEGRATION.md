@@ -25,15 +25,18 @@ are true:
   selected modifiers producing the expected notes from the firmware process.
 
 `microfreak-tools` documents a 259-byte cave at `0x0807B264`. The mode
-does not fit there. It retires 17 words of bank 4 and links at
-`0x0807A440`. See `docs/BLOCKERS.md`.
+does not fit there. It retires 18 words of bank 4 and links at
+`0x0807A38C`. The keyboard note call at `0x0803AD9E` is a second branch.
+See `docs/BLOCKERS.md`.
 
-`scripts/boot_triad.py` already shows one root, modifiers, latch, strum,
-and arp through the firmware note path. Shift+OCT|MOD waits on the
-OCT | MOD control id. The bootloader recovery chord is not a test we
-are allowed to weaken.
+`scripts/boot_triad.py` shows one root, modifiers, latch, strum, and arp
+through MIDI, then arms the keyboard layout and plays a root and a minor
+modifier from key frames. Unarmed, the same key is one stock note.
+Shift+OCT|MOD still waits on the OCT | MOD control id. The bootloader
+recovery chord is not a test we are allowed to weaken.
 
-Panel frames that are already documented, and only these, may be reused:
-USART2, 8 bytes, `AA` plus six payload bytes plus an 8-bit sum. Button down
-from chip `0x20` is `20 01 id_hi id_lo 00 00`. Shift's id in the emulator's
-panel table is `0x0804`. Key numbers and OCT | MOD are not in that table.
+Panel frames are USART2, 8 bytes, `AA` plus six payload bytes plus an
+8-bit sum. Button down from chip `0x20` is `20 01 id_hi id_lo 00 00`.
+Shift's id in the emulator's panel table is `0x0804`. A key down is
+`00 05 00 index 00 velocity` and a key up is `00 06 00 index 00 00`.
+Index n is MIDI note n+48 on the stock path. OCT | MOD is not in that table.

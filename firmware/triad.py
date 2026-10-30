@@ -18,6 +18,7 @@ from pathlib import Path
 
 BASE = 0x0800C000
 HOOK_SITE = 0x080478EA
+KEY_SITE = 0x0803AD9E
 DISPATCH = 0x08048524
 CAVE = 0x0807B264
 CAVE_END = 0x0807B367
@@ -132,19 +133,23 @@ def apply_triad(image: bytes, code: bytes) -> bytearray:
     return out
 
 
-# The full mode retires 17 words of bank 4. The kept bitstream ends at
-# 0x0807A43E; the hook starts on the next word-aligned address.
-MODE_CAVE = 0x0807A440
+# The full mode retires 18 words of bank 4. The kept bitstream ends at
+# the hook: 0x0807A0A4 + 0x2E8 = 0x0807A38C.
+MODE_CAVE = 0x0807A38C
 MODE_CAVE_END = 0x0807B367
-MODE_BANK_SIZE = 0x39A
+MODE_BANK_SIZE = 0x2E8
 STACK_TOP = 0x2001FE00
 VECTOR_SP = 0x0800C000
 STARTUP_SP = 0x0805F884
 OLD_STACK = 0x20020000
 
 
-def compile_mode(clang: Path | None = None) -> bytes:
-    """Assemble the full mode and return the flash bytes."""
+def compile_mode(clang: Path | None = None) -> tuple[bytes, int, int]:
+    """Assemble the full mode.
+
+    Returns the flash bytes and the offsets of orchid_chord and orchid_key.
+    The linker does not put the MIDI entry first, so each bl uses its offset.
+    """
     compiler = clang or _CLANG
     if not compiler.is_file():
         raise FileNotFoundError(f"clang is not at {compiler}")
@@ -183,18 +188,45 @@ def compile_mode(clang: Path | None = None) -> bytes:
         )
         if copied.returncode != 0:
             raise RuntimeError(copied.stderr.strip() or "llvm-objcopy failed")
+        listed = subprocess.run(
+            [str(compiler.with_name("llvm-nm.exe")), "--defined-only", str(elf)],
+            capture_output=True, text=True,
+        )
+        if listed.returncode != 0:
+            raise RuntimeError(listed.stderr.strip() or "llvm-nm failed")
         code = blob.read_bytes()
+        chord_at = key_at = None
+        for line in listed.stdout.splitlines():
+            parts = line.split()
+            if len(parts) < 3:
+                continue
+            addr = int(parts[0], 16)
+            name = parts[-1]
+            if name == "orchid_key":
+                key_at = addr
+            elif name == "orchid_chord":
+                chord_at = addr
     if not code or MODE_CAVE + len(code) > MODE_CAVE_END:
         raise RuntimeError(f"mode is {len(code)} bytes and crosses 0x{MODE_CAVE_END:08X}")
-    return code
+    if chord_at is None or key_at is None:
+        raise RuntimeError(f"entry points are chord {chord_at} key {key_at}")
+    chord_offset = chord_at - MODE_CAVE
+    key_offset = key_at - MODE_CAVE
+    if not 0 <= chord_offset < len(code) or not 0 <= key_offset < len(code):
+        raise RuntimeError(f"entries sit outside the image ({chord_offset}, {key_offset})")
+    if chord_offset == key_offset:
+        raise RuntimeError("orchid_chord and orchid_key landed on the same address")
+    return code, chord_offset, key_offset
 
 
-def apply_mode(image: bytes, code: bytes) -> bytearray:
-    """Place the full mode, retire 17 speech words, and lower the stack."""
+def apply_mode(image: bytes, code: bytes, chord_offset: int, key_offset: int) -> bytearray:
+    """Place the full mode, retire 18 speech words, and lower the stack."""
     if len(image) < STARTUP_SP - BASE + 4:
         raise ValueError("image is shorter than the startup literal")
     if image[HOOK_SITE - BASE:HOOK_SITE - BASE + 4] != encode_bl(HOOK_SITE, DISPATCH):
         raise ValueError("the channel callback does not call midi_dispatch")
+    if image[KEY_SITE - BASE:KEY_SITE - BASE + 4] != encode_bl(KEY_SITE, DISPATCH):
+        raise ValueError("the key note does not call midi_dispatch")
     if _word(image, BANK4_SIZE_ADDR) != BANK4_SIZE:
         raise ValueError("bank 4 is not the 22-word factory bank")
     if _word(image, VECTOR_SP) != OLD_STACK or _word(image, STARTUP_SP) != OLD_STACK:
@@ -203,8 +235,11 @@ def apply_mode(image: bytes, code: bytes) -> bytearray:
         raise ValueError("the kept speech words run into the hook")
     if MODE_CAVE + len(code) > MODE_CAVE_END:
         raise ValueError("mode crosses the live objects")
+    if not 0 <= chord_offset < len(code) or not 0 <= key_offset < len(code):
+        raise ValueError("an entry point is outside the mode image")
     out = bytearray(image)
-    out[HOOK_SITE - BASE:HOOK_SITE - BASE + 4] = encode_bl(HOOK_SITE, MODE_CAVE)
+    out[HOOK_SITE - BASE:HOOK_SITE - BASE + 4] = encode_bl(HOOK_SITE, MODE_CAVE + chord_offset)
+    out[KEY_SITE - BASE:KEY_SITE - BASE + 4] = encode_bl(KEY_SITE, MODE_CAVE + key_offset)
     struct.pack_into("<I", out, BANK4_SIZE_ADDR - BASE, MODE_BANK_SIZE)
     struct.pack_into("<I", out, VECTOR_SP - BASE, STACK_TOP)
     struct.pack_into("<I", out, STARTUP_SP - BASE, STACK_TOP)

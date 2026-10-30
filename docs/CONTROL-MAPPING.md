@@ -43,6 +43,12 @@ Index 0 is the left end of the 25-key bed.
 At octave 0 the roots are MIDI 60 through 72. The host does not use the
 incoming note number as the chord root. It uses the key index.
 
+On the chip, a key down frame is `AA 00 05 00 index 00 velocity` plus the
+checksum, and key up is subcommand `0x06` with value 0. Stock firmware
+sounds index n as MIDI note n+48. That was measured for indexes 0, 7, 12
+and 24. The keyboard branch stays off until mailbox op 7, because the
+OCT | MOD button id is still unknown. Unarmed, the key is one stock note.
+
 ## MIDI channels
 
 Input is channel 1 in the API's zero-based numbering (`input_channel=0`).

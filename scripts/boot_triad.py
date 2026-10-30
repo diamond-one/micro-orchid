@@ -1,6 +1,6 @@
 """Boot the mode image and compare its notes with the Python engine.
 
-Builds a payload from SuperFreaker, retires 17 words of speech bank 4,
+Builds a payload from SuperFreaker, retires 18 words of speech bank 4,
 and places the chord mode. Writes that payload to a temp file.
 Does not modify the downloaded .mff and does not write a device.
 
@@ -24,12 +24,14 @@ from firmware.coexist import placement_ok  # noqa: E402
 from firmware.triad import (  # noqa: E402
     BANK4_SIZE_ADDR,
     HOOK_SITE,
+    KEY_SITE,
     STARTUP_SP,
     VECTOR_SP,
     apply_mode,
     changed_spans,
     compile_mode,
 )
+from firmware.keys import key_frame  # noqa: E402
 from orchid.engine import Engine  # noqa: E402
 from orchid.layout import Key  # noqa: E402
 from scripts.inspect_firmware import load_mff, payload  # noqa: E402
@@ -41,16 +43,17 @@ VELOCITY = 100
 
 
 def build() -> tuple[bytes, bytes]:
-    code = compile_mode()
+    code, chord_at, key_at = compile_mode()
     stock = payload(load_mff(STOCK)[2][0][1])
     base = payload(load_mff(SUPER)[2][0][1])
     for address, length in (
-        (HOOK_SITE, 4), (BANK4_SIZE_ADDR, 4), (VECTOR_SP, 4), (STARTUP_SP, 4),
+        (HOOK_SITE, 4), (KEY_SITE, 4), (BANK4_SIZE_ADDR, 4),
+        (VECTOR_SP, 4), (STARTUP_SP, 4),
     ):
         offset = address - 0x0800C000
         if stock[offset:offset + length] != base[offset:offset + length]:
             raise SystemExit(f"SuperFreaker already differs at 0x{address:08X}")
-    patched = bytes(apply_mode(base, code))
+    patched = bytes(apply_mode(base, code, chord_at, key_at))
     for start, end in changed_spans(base, patched):
         if not placement_ok(start, end):
             raise SystemExit(f"patch overlaps SuperFreaker at 0x{start:08X}")
@@ -122,9 +125,13 @@ def boot_and_compare(patched: bytes) -> int:
             synth.monitor("sysbus WriteByte 0x2001FF02 %d" % b)
             synth.monitor("sysbus WriteByte 0x2001FF03 1")
 
-        def capture(message: list[int], expect: int) -> list[int]:
+        def capture(message: list[int] | None, expect: int, bus: list[int] | None = None) -> list[int]:
             before = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
-            synth.send(message)
+            if bus is not None:
+                for byte in bus:
+                    synth.monitor("usart2 WriteChar 0x%02X" % byte)
+            else:
+                synth.send(message or [])
             if expect == 0:
                 time.sleep(2.5)
                 text = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
@@ -207,6 +214,29 @@ def boot_and_compare(patched: bytes) -> int:
         arp_step = pairs(engine.advance(120))
         mail(5, 120)
         ok = _expect("arp step", capture([0x80, 14, 0x40], len(arp_step)), arp_step) and ok
+
+        cleared = pairs(engine.panic())
+        mail(6)
+        ok = _expect("clear for keys", capture([0x80, 15, 0x40], len(cleared) if cleared else 0), cleared) and ok
+        for port, pin in (("gpioPortC", 4), ("gpioPortC", 9),
+                          ("gpioPortC", 12), ("gpioPortD", 14)):
+            synth.monitor("%s OnGPIO %d true" % (port, pin))
+        keys = Engine()
+        mail(7, 1)
+        major_key = pairs(keys.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
+        ok = _expect("key root", capture(None, len(major_key), key_frame(12, True, VELOCITY)), major_key) and ok
+        minor_key = pairs(keys.modifier_down(Key.MIN))
+        ok = _expect("key minor", capture(None, len(minor_key), key_frame(1, True)), minor_key) and ok
+        key_up = pairs(keys.root_up(ROOT_NOTE))
+        ok = _expect("key release", capture(None, len(key_up), key_frame(12, False)), key_up) and ok
+        cleared = pairs(keys.panic())
+        mail(6)
+        ok = _expect("disarm", capture([0xC0, 0], len(cleared) if cleared else 0), cleared) and ok
+        ok = _expect(
+            "key stock",
+            capture(None, 1, key_frame(12, True, VELOCITY)),
+            [("on", ROOT_NOTE)],
+        ) and ok
         return 0 if ok else 1
 
 

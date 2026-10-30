@@ -14,6 +14,7 @@ from firmware.triad import (
     CAVE_END,
     DISPATCH,
     HOOK_SITE,
+    KEY_SITE,
     MODE_CAVE,
     OLD_STACK,
     STARTUP_SP,
@@ -32,6 +33,7 @@ from orchid.chords import Quality, spell
 def _image() -> bytearray:
     image = bytearray(473695)
     image[HOOK_SITE - BASE:HOOK_SITE - BASE + 4] = encode_bl(HOOK_SITE, DISPATCH)
+    image[KEY_SITE - BASE:KEY_SITE - BASE + 4] = encode_bl(KEY_SITE, DISPATCH)
     struct.pack_into("<I", image, BANK4_SIZE_ADDR - BASE, BANK4_SIZE)
     return image
 
@@ -78,17 +80,18 @@ class TriadTests(unittest.TestCase):
         ):
             self.assertTrue(placement_ok(start, end), hex(start))
 
-    def test_mode_fits_in_seventeen_retired_words(self):
-        code = compile_mode()
+    def test_mode_fits_in_eighteen_retired_words(self):
+        code, chord_at, key_at = compile_mode()
         image = bytearray(_image())
         struct.pack_into("<I", image, VECTOR_SP - BASE, OLD_STACK)
         struct.pack_into("<I", image, STARTUP_SP - BASE, OLD_STACK)
-        patched = apply_mode(bytes(image), code)
+        patched = apply_mode(bytes(image), code, chord_at, key_at)
         self.assertEqual(
             [(item["start"], item["end"]) for item in PATCH_MANIFEST],
             [
                 (VECTOR_SP, VECTOR_SP + 4),
                 (HOOK_SITE, HOOK_SITE + 4),
+                (KEY_SITE, KEY_SITE + 4),
                 (STARTUP_SP, STARTUP_SP + 4),
                 (BANK4_SIZE_ADDR, BANK4_SIZE_ADDR + 4),
                 (MODE_CAVE, MODE_CAVE + len(code)),
@@ -96,6 +99,14 @@ class TriadTests(unittest.TestCase):
         )
         for item in PATCH_MANIFEST:
             self.assertTrue(placement_ok(int(item["start"]), int(item["end"])))
+        self.assertEqual(
+            patched[HOOK_SITE - BASE:HOOK_SITE - BASE + 4],
+            encode_bl(HOOK_SITE, MODE_CAVE + chord_at),
+        )
+        self.assertEqual(
+            patched[KEY_SITE - BASE:KEY_SITE - BASE + 4],
+            encode_bl(KEY_SITE, MODE_CAVE + key_at),
+        )
 
 
 if __name__ == "__main__":

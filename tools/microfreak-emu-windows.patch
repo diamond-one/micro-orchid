@@ -1,0 +1,92 @@
+diff --git a/renode/STM32_QUADSPI.cs b/renode/STM32_QUADSPI.cs
+index 5654565..1aa4a02 100644
+--- a/renode/STM32_QUADSPI.cs
++++ b/renode/STM32_QUADSPI.cs
+@@ -535,7 +535,21 @@ namespace Antmicro.Renode.Peripherals.SPI
+             private bool wel, fourByte;
+ 
+             private static readonly byte[] Empty = new byte[0];
+-            private static readonly byte[] Jedec = { 0xC2, 0x20, 0x18 };
++            // Not `= { 0xC2, 0x20, 0x18 }`. The Mono compiler turns a static
++            // byte-array initializer into a data blob and names it with
++            // Mono.Security.Cryptography.CryptoConvert.ToHex. Renode's Windows
++            // package does not ship Mono.Security, so that initializer aborts
++            // the compile and the monitor prints only a source location.
++            private static readonly byte[] Jedec = MakeJedec();
++
++            private static byte[] MakeJedec()
++            {
++                var id = new byte[3];
++                id[0] = 0xC2;
++                id[1] = 0x20;
++                id[2] = 0x18;
++                return id;
++            }
+ 
+             private const uint RSTEN = 0x66, RST = 0x99, WRDI = 0x04, WREN = 0x06;
+             private const uint RDSR = 0x05, RDSR2 = 0x35, RDSR3 = 0x15;
+diff --git a/src/mfemu/midilink.py b/src/mfemu/midilink.py
+index 4517242..ae793ba 100644
+--- a/src/mfemu/midilink.py
++++ b/src/mfemu/midilink.py
+@@ -203,7 +203,9 @@ class EmulatedSynth:
+             "connector Connect usart1 midi",
+             "start",
+         ]
+-        open(path, "w").write("\n".join(lines) + "\n")
++        # Renode treats backslash as an escape. Windows paths have to use
++        # forward slashes or the script dies on the first `\U`.
++        open(path, "w").write(("\n".join(lines) + "\n").replace("\\", "/"))
+         return path
+ 
+     def start(self):
+@@ -246,7 +248,9 @@ class EmulatedSynth:
+     def _connect(self):
+         """Attach to the machine's two sockets. Used after spawning Renode,
+         and on its own by `attach()` when the machine is already running."""
+-        deadline = time.time() + 60
++        # The first launch compiles the C# peripheral models. On a cold
++        # Windows install that takes longer than a minute.
++        deadline = time.time() + 180
+         while time.time() < deadline:
+             try:
+                 self.sock = socket.create_connection(("127.0.0.1", self.port), timeout=5)
+@@ -278,7 +282,7 @@ class EmulatedSynth:
+                         % (self.port, self.monitor_port, tail, self.log_path))
+                 time.sleep(0.5)
+         else:
+-            raise RuntimeError("no socket on port %d after 60 s" % self.port)
++            raise RuntimeError("no socket on port %d after 180 s" % self.port)
+         # The Monitor socket carries commands (poke the gate, read the clock,
+         # save the capture); USART1's socket carries MIDI.  Two channels,
+         # because the machine has to keep running while we talk to it.
+diff --git a/src/mfemu/paths.py b/src/mfemu/paths.py
+index 8ec9b38..ddfd659 100644
+--- a/src/mfemu/paths.py
++++ b/src/mfemu/paths.py
+@@ -490,7 +490,14 @@ def renode_config():
+     path = os.path.join(CACHE, "renode.config")
+     if not os.path.exists(path):
+         with open(path, "w") as fh:
+-            fh.write("[general]\ncompiler-cache-enabled = True\n")
++            # Windows: mcs keeps the output assembly open, and Renode's cache
++            # copy then fails with a sharing violation whose message never
++            # reaches the monitor. The cache exists so snapshots can find the
++            # same GUID next process. A boot does not save a snapshot.
++            # Other platforms keep the cache, which is what makes snapshots
++            # load in a second process.
++            enabled = "False" if os.name == "nt" else "True"
++            fh.write("[general]\ncompiler-cache-enabled = %s\n" % enabled)
+     return path
+ 
+ # There is no captures path here any more. The protocol recordings were how
+@@ -587,7 +594,8 @@ def resc(path):
+     expanduser as well as abspath: `~/Downloads/x.bin` in quotes reaches us
+     with the tilde intact, and Renode does not expand it either.
+     """
+-    return os.path.abspath(os.path.expanduser(path))
++    path = os.path.abspath(os.path.expanduser(path))
++    return path.replace("\\", "/")
+ 
+ 
+ def check(*paths):

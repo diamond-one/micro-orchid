@@ -1,9 +1,8 @@
 # Progress
 
-Phase: C and D are implemented and tested. The stock image and SuperFreaker
-0.1.2 have been identified and diffed. A native patch is still blocked on
-Renode, an ARM assembler, and a code cave larger than 259 bytes that does
-not collide with SuperFreaker.
+Phase: C and D are implemented and tested. Stock 5.0.0.2084 and SuperFreaker
+0.1.2 both reach `main()` under Renode 1.17. A native patch is still blocked
+on a code cave larger than 259 bytes that does not collide with SuperFreaker.
 
 ## Done
 
@@ -22,30 +21,24 @@ not collide with SuperFreaker.
 
 ## Not done
 
-- `uv sync`, `mfemu check`, `mfemu boot`.
-- Any boot of stock or patched firmware.
+- A code cave larger than the 259-byte speech tail, accepted by
+  `firmware/coexist.py`, and shown by disassembly to be unused.
 - Any keyboard-frame injector for the 25 keys.
-- Any changed firmware byte.
+- Any changed firmware byte. No Orchid image exists.
 
 ## Latest test
 
 `python scripts/verify_orchid.py`
 
 - unit tests: PASS (39 ran, 0 failed, 0 errors)
-- stock firmware: BLOCKED
-- emulator boot: BLOCKED
+- stock firmware boot: PASS (`main()` at 6,915,574 instructions, PC `0x08023444`)
+- SuperFreaker 0.1.2 boot: PASS (`main()` at 6,915,727 instructions, PC `0x08024FB6`)
 - native patch: BLOCKED
 - hardware flash: NOT RUN
 
-## Next command, once a stock `.mff` is in `firmware/stock/` and Renode is installed
+## Next
 
-```
-uv sync
-uv run mfemu check --firmware ../../firmware/stock/<official>.mff
-uv run mfemu boot --firmware ../../firmware/stock/<official>.mff
-```
-
-Run those from a microfreak-emu checkout whose sibling is microfreak-tools,
-as that repo's README requires. Do not point them at an image whose payload
-sha256 is not `54be2e0b695e2279602513e1a9ed39906408ba221a45e782b61273f0ef55d15f`
-unless the addresses in `docs/ARCHITECTURE.md` have been re-derived.
+Find a placement `firmware/coexist.py` accepts that is larger than 259 bytes,
+and show from the disassembly that the firmware does not execute it. Then
+assemble the smallest hook: one root key becomes one chord through the
+firmware note path. Boot that third image. Do not write it to a device.

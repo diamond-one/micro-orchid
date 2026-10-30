@@ -65,5 +65,5 @@ engine does not fit in it. Orchid's Shift+OCT|MOD toggle also cannot reuse
 SuperFreaker's shift-lock site. The toggle has to be a new hook on a byte
 range this check still allows, chained so their lock behavior still runs.
 
-No combined image has been built. Renode is not installed, so nothing has
-been booted.
+No combined image has been built. The unmodified SuperFreaker image does
+boot: Renode 1.17 reached its `main()` at 6,915,727 instructions.

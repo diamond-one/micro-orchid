@@ -1,18 +1,19 @@
 # Blockers
 
-## Stock firmware image — identified, not booted
+## Stock firmware image — booted, not stored here
 
 The user's stock file matches 5.0.0.2084. Container sha256
 `c2b405e3c8565b7b73b4dd06522559458190082a8ba633cc5f1bcc43dc64332c`,
 payload sha256
 `54be2e0b695e2279602513e1a9ed39906408ba221a45e782b61273f0ef55d15f`.
-It stays in Downloads. It is not copied into this repo. The emulator has
-not booted it.
+It stays in Downloads. It is not copied into this repo. Renode 1.17 booted
+it to `main()`. SuperFreaker 0.1.2 booted the same way. See
+`docs/ENVIRONMENT.md`.
 
-## Renode, uv, and an ARM toolchain — blocked
+## Assembler — present, native patch not built
 
-`uv` and Renode are not installed. There is no `gcc`, `clang`, or
-`arm-none-eabi-gcc`. A native patch cannot be assembled or executed here.
+clang 23.1.4 can target `thumbv7em-none-eabi`. There is no
+`arm-none-eabi-gcc`. No Orchid instruction has been assembled or placed.
 
 ## Code space — blocked, with a documented reason
 

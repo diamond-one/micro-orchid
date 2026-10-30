@@ -1,6 +1,6 @@
 """Boot the mode image and compare its notes with the Python engine.
 
-Builds a payload from SuperFreaker, retires 18 words of speech bank 4,
+Builds a payload from SuperFreaker, retires 20 words of speech bank 4,
 and places the chord mode. Writes that payload to a temp file.
 Does not modify the downloaded .mff and does not write a device.
 
@@ -23,6 +23,8 @@ sys.path.insert(0, str(_ROOT / "src"))
 from firmware.coexist import placement_ok  # noqa: E402
 from firmware.triad import (  # noqa: E402
     BANK4_SIZE_ADDR,
+    BUTTON_DOWN,
+    BUTTON_UP,
     HOOK_SITE,
     KEY_SITE,
     STARTUP_SP,
@@ -31,7 +33,7 @@ from firmware.triad import (  # noqa: E402
     changed_spans,
     compile_mode,
 )
-from firmware.keys import key_frame  # noqa: E402
+from firmware.keys import OCT_MOD_ID, SHIFT_ID, button_frame, key_frame  # noqa: E402
 from orchid.engine import Engine  # noqa: E402
 from orchid.layout import Key  # noqa: E402
 from scripts.inspect_firmware import load_mff, payload  # noqa: E402
@@ -43,17 +45,18 @@ VELOCITY = 100
 
 
 def build() -> tuple[bytes, bytes]:
-    code, chord_at, key_at = compile_mode()
+    code, chord_at, key_at, button_at = compile_mode()
     stock = payload(load_mff(STOCK)[2][0][1])
     base = payload(load_mff(SUPER)[2][0][1])
     for address, length in (
-        (HOOK_SITE, 4), (KEY_SITE, 4), (BANK4_SIZE_ADDR, 4),
+        (HOOK_SITE, 4), (KEY_SITE, 4), (BUTTON_DOWN, 4), (BUTTON_UP, 4),
+        (BANK4_SIZE_ADDR, 4),
         (VECTOR_SP, 4), (STARTUP_SP, 4),
     ):
         offset = address - 0x0800C000
         if stock[offset:offset + length] != base[offset:offset + length]:
             raise SystemExit(f"SuperFreaker already differs at 0x{address:08X}")
-    patched = bytes(apply_mode(base, code, chord_at, key_at))
+    patched = bytes(apply_mode(base, code, chord_at, key_at, button_at))
     for start, end in changed_spans(base, patched):
         if not placement_ok(start, end):
             raise SystemExit(f"patch overlaps SuperFreaker at 0x{start:08X}")
@@ -234,6 +237,65 @@ def boot_and_compare(patched: bytes) -> int:
         ok = _expect("disarm", capture([0xC0, 0], len(cleared) if cleared else 0), cleared) and ok
         ok = _expect(
             "key stock",
+            capture(None, 1, key_frame(12, True, VELOCITY)),
+            [("on", ROOT_NOTE)],
+        ) and ok
+        ok = _expect(
+            "key stock up",
+            capture(None, 1, key_frame(12, False)),
+            [("off", ROOT_NOTE)],
+        ) and ok
+
+        shortcut = Engine()
+        ok = _expect("shift alone", capture(None, 0, button_frame(SHIFT_ID, True)), []) and ok
+        ok = _expect(
+            "shift still stock",
+            capture(None, 1, key_frame(12, True, VELOCITY)),
+            [("on", ROOT_NOTE)],
+        ) and ok
+        ok = _expect(
+            "shift stock up",
+            capture(None, 1, key_frame(12, False)),
+            [("off", ROOT_NOTE)],
+        ) and ok
+        ok = _expect("shift release", capture(None, 0, button_frame(SHIFT_ID, False)), []) and ok
+        ok = _expect("oct alone", capture(None, 0, button_frame(OCT_MOD_ID, True)), []) and ok
+        ok = _expect("oct release", capture(None, 0, button_frame(OCT_MOD_ID, False)), []) and ok
+
+        ok = _expect(
+            "held stock",
+            capture(None, 1, key_frame(12, True, VELOCITY)),
+            [("on", ROOT_NOTE)],
+        ) and ok
+        ok = _expect("arm shift", capture(None, 0, button_frame(SHIFT_ID, True)), []) and ok
+        ok = _expect(
+            "arm oct",
+            capture(None, 1, button_frame(OCT_MOD_ID, True)),
+            [("off", ROOT_NOTE)],
+        ) and ok
+        ok = _expect("arm key lift", capture(None, 0, key_frame(12, False)), []) and ok
+        armed = pairs(shortcut.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
+        ok = _expect(
+            "armed root",
+            capture(None, len(armed), key_frame(12, True, VELOCITY)),
+            armed,
+        ) and ok
+        released = pairs(shortcut.panic())
+        ok = _expect("off shift", capture(None, 0, button_frame(SHIFT_ID, False)), []) and ok
+        ok = _expect("off oct up", capture(None, 0, button_frame(OCT_MOD_ID, False)), []) and ok
+        ok = _expect("off shift down", capture(None, 0, button_frame(SHIFT_ID, True)), []) and ok
+        ok = _expect(
+            "off oct",
+            capture(None, len(released), button_frame(OCT_MOD_ID, True)),
+            released,
+        ) and ok
+        ok = _expect(
+            "off key lift",
+            capture(None, 1, key_frame(12, False)),
+            [("off", ROOT_NOTE)],
+        ) and ok
+        ok = _expect(
+            "stock again",
             capture(None, 1, key_frame(12, True, VELOCITY)),
             [("on", ROOT_NOTE)],
         ) and ok

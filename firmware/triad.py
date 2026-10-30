@@ -19,6 +19,9 @@ from pathlib import Path
 BASE = 0x0800C000
 HOOK_SITE = 0x080478EA
 KEY_SITE = 0x0803AD9E
+BUTTON_DOWN = 0x0804348C
+BUTTON_UP = 0x080434A4
+BUTTON_FN = 0x08043224
 DISPATCH = 0x08048524
 CAVE = 0x0807B264
 CAVE_END = 0x0807B367
@@ -133,22 +136,23 @@ def apply_triad(image: bytes, code: bytes) -> bytearray:
     return out
 
 
-# The full mode retires 18 words of bank 4. The kept bitstream ends at
-# the hook: 0x0807A0A4 + 0x2E8 = 0x0807A38C.
-MODE_CAVE = 0x0807A38C
+# The full mode retires 20 words of bank 4. The word boundary is
+# 0x0807A0A4 + 0x169 = 0x0807A20D. Code starts on the next 4-byte address.
+MODE_CAVE = 0x0807A210
 MODE_CAVE_END = 0x0807B367
-MODE_BANK_SIZE = 0x2E8
+MODE_BANK_SIZE = 0x169
 STACK_TOP = 0x2001FE00
 VECTOR_SP = 0x0800C000
 STARTUP_SP = 0x0805F884
 OLD_STACK = 0x20020000
 
 
-def compile_mode(clang: Path | None = None) -> tuple[bytes, int, int]:
+def compile_mode(clang: Path | None = None) -> tuple[bytes, int, int, int]:
     """Assemble the full mode.
 
-    Returns the flash bytes and the offsets of orchid_chord and orchid_key.
-    The linker does not put the MIDI entry first, so each bl uses its offset.
+    Returns the flash bytes and the offsets of orchid_chord, orchid_key, and
+    orchid_button. The linker does not put the MIDI entry first, so each bl
+    uses its offset.
     """
     compiler = clang or _CLANG
     if not compiler.is_file():
@@ -195,7 +199,7 @@ def compile_mode(clang: Path | None = None) -> tuple[bytes, int, int]:
         if listed.returncode != 0:
             raise RuntimeError(listed.stderr.strip() or "llvm-nm failed")
         code = blob.read_bytes()
-        chord_at = key_at = None
+        chord_at = key_at = button_at = None
         for line in listed.stdout.splitlines():
             parts = line.split()
             if len(parts) < 3:
@@ -206,27 +210,35 @@ def compile_mode(clang: Path | None = None) -> tuple[bytes, int, int]:
                 key_at = addr
             elif name == "orchid_chord":
                 chord_at = addr
+            elif name == "orchid_button":
+                button_at = addr
     if not code or MODE_CAVE + len(code) > MODE_CAVE_END:
         raise RuntimeError(f"mode is {len(code)} bytes and crosses 0x{MODE_CAVE_END:08X}")
-    if chord_at is None or key_at is None:
-        raise RuntimeError(f"entry points are chord {chord_at} key {key_at}")
+    if chord_at is None or key_at is None or button_at is None:
+        raise RuntimeError(f"entry points are chord {chord_at} key {key_at} button {button_at}")
     chord_offset = chord_at - MODE_CAVE
     key_offset = key_at - MODE_CAVE
-    if not 0 <= chord_offset < len(code) or not 0 <= key_offset < len(code):
-        raise RuntimeError(f"entries sit outside the image ({chord_offset}, {key_offset})")
-    if chord_offset == key_offset:
-        raise RuntimeError("orchid_chord and orchid_key landed on the same address")
-    return code, chord_offset, key_offset
+    button_offset = button_at - MODE_CAVE
+    offsets = (chord_offset, key_offset, button_offset)
+    if any(not 0 <= item < len(code) for item in offsets):
+        raise RuntimeError(f"entries sit outside the image {offsets}")
+    if len(set(offsets)) != 3:
+        raise RuntimeError("two entry points landed on the same address")
+    return code, chord_offset, key_offset, button_offset
 
 
-def apply_mode(image: bytes, code: bytes, chord_offset: int, key_offset: int) -> bytearray:
-    """Place the full mode, retire 18 speech words, and lower the stack."""
+def apply_mode(image: bytes, code: bytes, chord_offset: int, key_offset: int,
+                button_offset: int) -> bytearray:
+    """Place the full mode, retire 20 speech words, and lower the stack."""
     if len(image) < STARTUP_SP - BASE + 4:
         raise ValueError("image is shorter than the startup literal")
     if image[HOOK_SITE - BASE:HOOK_SITE - BASE + 4] != encode_bl(HOOK_SITE, DISPATCH):
         raise ValueError("the channel callback does not call midi_dispatch")
     if image[KEY_SITE - BASE:KEY_SITE - BASE + 4] != encode_bl(KEY_SITE, DISPATCH):
         raise ValueError("the key note does not call midi_dispatch")
+    for site in (BUTTON_DOWN, BUTTON_UP):
+        if image[site - BASE:site - BASE + 4] != encode_bl(site, BUTTON_FN):
+            raise ValueError(f"button edge at 0x{site:08X} does not call the handler")
     if _word(image, BANK4_SIZE_ADDR) != BANK4_SIZE:
         raise ValueError("bank 4 is not the 22-word factory bank")
     if _word(image, VECTOR_SP) != OLD_STACK or _word(image, STARTUP_SP) != OLD_STACK:
@@ -235,11 +247,14 @@ def apply_mode(image: bytes, code: bytes, chord_offset: int, key_offset: int) ->
         raise ValueError("the kept speech words run into the hook")
     if MODE_CAVE + len(code) > MODE_CAVE_END:
         raise ValueError("mode crosses the live objects")
-    if not 0 <= chord_offset < len(code) or not 0 <= key_offset < len(code):
+    offsets = (chord_offset, key_offset, button_offset)
+    if any(not 0 <= item < len(code) for item in offsets):
         raise ValueError("an entry point is outside the mode image")
     out = bytearray(image)
     out[HOOK_SITE - BASE:HOOK_SITE - BASE + 4] = encode_bl(HOOK_SITE, MODE_CAVE + chord_offset)
     out[KEY_SITE - BASE:KEY_SITE - BASE + 4] = encode_bl(KEY_SITE, MODE_CAVE + key_offset)
+    for site in (BUTTON_DOWN, BUTTON_UP):
+        out[site - BASE:site - BASE + 4] = encode_bl(site, MODE_CAVE + button_offset)
     struct.pack_into("<I", out, BANK4_SIZE_ADDR - BASE, MODE_BANK_SIZE)
     struct.pack_into("<I", out, VECTOR_SP - BASE, STACK_TOP)
     struct.pack_into("<I", out, STARTUP_SP - BASE, STACK_TOP)

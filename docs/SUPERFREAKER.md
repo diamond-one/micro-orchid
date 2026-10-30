@@ -89,9 +89,12 @@ the descriptor, is the way to get more than 259 bytes:
 | 16 | 3601 |
 | 17 | 3881 |
 | 18 | 4059 |
+| 19 | 4287 |
+| 20 | 4442 |
 
-Eighteen is the current mode: 3,924 bytes. Seventeen words were 45 bytes
-short of that image.
+Twenty is the current mode: 4,320 bytes, placed at `0x0807A210` because
+the 20-word boundary `0x0807A20D` is not a 4-byte address. Nineteen
+words are 33 bytes short of that image.
 
 The cut has to land on a word boundary. A mid-word size leaves a partial
 bitstream. Each retired word is a factory speech word that no longer
@@ -112,14 +115,15 @@ still equal to stock outside SuperFreaker's window.
 - writes the shift-lock handler at `0x080387A4`
 
 The one-word speech cave passes that test. The mode does not fit in it.
-The combined image retires 18 bank-4 words, writes 3,924 bytes at
-`0x0807A38C`, and also changes the bank-4 size, the channel-callback
-branch at `0x080478EA`, the key-note branch at `0x0803AD9E`, and both
-stack tops. `placement_ok` accepts those six ranges. Orchid's
-Shift+OCT|MOD toggle also cannot reuse SuperFreaker's shift-lock site.
-The OCT | MOD id is still unknown, so this image does not contain that
-toggle. Key index n is delivered by a panel frame and becomes MIDI note
-n+48 before the key branch.
+The combined image retires 20 bank-4 words. The word boundary is
+`0x0807A20D`, so the 4,320 bytes start at `0x0807A210` and end at
+`0x0807B2F0`. It also changes the bank-4 size, the channel-callback
+branch at `0x080478EA`, the key-note branch at `0x0803AD9E`, the button
+edges at `0x0804348C` and `0x080434A4`, and both stack tops.
+`placement_ok` accepts those eight ranges. The toggle does not use
+SuperFreaker's shift-lock site. Oct | Mod is control `0x0401`. Key
+index n is delivered by a panel frame and becomes MIDI note n+48
+before the key branch.
 
 The unmodified SuperFreaker image boots: Renode 1.17 reached its
 `main()` at 6,915,727 instructions. The mode image, built in a temp

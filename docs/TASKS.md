@@ -2,8 +2,8 @@
 
 ## Active
 
-1. Find the OCT | MOD panel id from a trace. Do not invent it. Key frames
-   are measured; that button is not.
+1. Draw `ORCHID ON` and `ORCHID OFF` on the panel display. The shortcut
+   itself is in the image. The screen text is not.
 
 ## Completed
 
@@ -11,16 +11,16 @@
   Index n sounds as MIDI note n+48. The mode branches at `0x0803AD9E`.
   Mailbox op 7 arms the layout: indexes 0-11 are modifiers and 12-24 are
   roots. Unarmed, the key stays one stock note.
-- Orchid Mode in the speech tail. Retires the last 18 words of bank 4
-  (size `0x2E8`, code at `0x0807A38C`, 3,924 bytes, ends `0x0807B2E0`).
-  Branches from the MIDI channel callback at `0x080478EA` and from the
-  key-note call at `0x0803AD9E`. Both stack tops (`0x0800C000` and
-  `0x0805F884`) move to `0x2001FE00` so the engine state and the mailbox
-  at `0x2001FF00` stay above the stack. The MIDI boot matched the Python
-  engine. The same run then armed the keyboard: key 12 played 60, 64, 67;
-  key 1 moved the third from 64 to 63; the key release cleared the chord;
-  with the layout disarmed, key 12 played only 60. The downloaded images
-  were not modified.
+- Orchid Mode in the speech tail. Retires the last 20 words of bank 4
+  (size `0x169`, code at `0x0807A210`, 4,320 bytes, ends `0x0807B2F0`).
+  Branches from the MIDI channel callback at `0x080478EA`, the key-note
+  call at `0x0803AD9E`, and the button edges at `0x0804348C` and
+  `0x080434A4`. Both stack tops (`0x0800C000` and `0x0805F884`) move to
+  `0x2001FE00`. The MIDI boot matched the Python engine. Key 12 played
+  60, 64, 67; key 1 moved the third from 64 to 63. Shift plus `0x0401`
+  armed the layout and the same shortcut released the chord. Shift
+  alone and that button alone left key 12 as one note. The downloaded
+  images were not modified.
 - Major-triad hook, kept as the smaller reference. It retires bank 4's
   last word only and is 110 bytes. The mode image is what `boot_triad.py`
   builds now.
@@ -37,12 +37,13 @@
   60 to 64.
 - The same engine in C, checked against the Python cases through a host DLL.
 - Shift+OCT|MOD behavior on the host, including power-on with the combo held.
-- Safety boundaries and the six-range mode manifest.
+- Safety boundaries and the eight-range mode manifest.
 - Verification command: `python scripts/verify_orchid.py`.
 
 ## Waiting
 
-- The OCT | MOD panel id. Key frames are measured. Do not invent the button.
-- A second person's review. The six ranges were checked locally against
+- The two display strings. Shift+Oct|Mod toggles the layout; the OLED
+  text from that toggle is not sent yet.
+- A second person's review. The eight ranges were checked locally against
   `placement_ok` and the SRAM literal pools.
 - Physical flash. Not authorized.

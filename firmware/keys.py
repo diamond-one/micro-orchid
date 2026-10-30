@@ -10,6 +10,11 @@ not what selects it.
 from __future__ import annotations
 
 NOTE_BASE = 48
+SHIFT_ID = 0x0804
+# Arp/Range. The button handler sends this id to the range editor, or to the
+# sequencer mod-track path when the sequencer is on. That is the Oct | Mod
+# button: it changes arp range, and it selects a seq mod track.
+OCT_MOD_ID = 0x0401
 
 
 def stock_note(index: int) -> int:
@@ -23,5 +28,16 @@ def key_frame(index: int, down: bool, velocity: int = 100) -> list[int]:
     stock_note(index)
     value = (velocity & 0x7F) if down else 0
     body = [0x00, 0x05 if down else 0x06, 0x00, index, (value >> 8) & 0xFF, value & 0xFF]
+    data = [0xAA, *body]
+    return data + [sum(data) & 0xFF]
+
+
+def button_frame(ident: int, down: bool) -> list[int]:
+    """Chip 2 button edge. Down value is 0; up value is 0x08."""
+    if not 0 <= ident <= 0xFFFF:
+        raise ValueError(f"button id {ident} does not fit in 16 bits")
+    value = 0 if down else 0x08
+    body = [0x20, 0x01 if down else 0x02, (ident >> 8) & 0xFF, ident & 0xFF,
+            (value >> 8) & 0xFF, value & 0xFF]
     data = [0xAA, *body]
     return data + [sum(data) & 0xFF]

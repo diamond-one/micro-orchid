@@ -2,7 +2,7 @@ import unittest
 
 import path_setup  # noqa: F401
 
-from firmware.keys import key_frame, stock_note
+from firmware.keys import OCT_MOD_ID, SHIFT_ID, button_frame, key_frame, stock_note
 
 
 class KeyFrameTests(unittest.TestCase):
@@ -19,6 +19,14 @@ class KeyFrameTests(unittest.TestCase):
         self.assertEqual(down[7], sum(down[:7]) & 0xFF)
         self.assertEqual(up[:7], [0xAA, 0x00, 0x06, 0x00, 12, 0x00, 0])
         self.assertEqual(up[7], sum(up[:7]) & 0xFF)
+
+    def test_oct_mod_frame(self):
+        down = button_frame(OCT_MOD_ID, True)
+        self.assertEqual(down[:7], [0xAA, 0x20, 0x01, 0x04, 0x01, 0x00, 0x00])
+        self.assertEqual(down[7], sum(down[:7]) & 0xFF)
+        up = button_frame(SHIFT_ID, False)
+        self.assertEqual(up[2], 0x02)
+        self.assertEqual(up[3:7], [0x08, 0x04, 0x00, 0x08])
 
     def test_index_is_checked(self):
         with self.assertRaises(ValueError):

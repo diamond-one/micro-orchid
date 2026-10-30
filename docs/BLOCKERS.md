@@ -13,7 +13,7 @@ it to `main()`. SuperFreaker 0.1.2 booted the same way. See
 ## Assembler — the mode is assembled
 
 clang 23.1.4 targets `thumbv7em-none-eabi`. There is no
-`arm-none-eabi-gcc`. The mode image is 3,924 bytes. The one-word triad
+`arm-none-eabi-gcc`. The mode image is 4,320 bytes. The one-word triad
 hook is still 110 bytes and is not what the boot script writes.
 
 ## Code space — the speech tail is the room
@@ -32,10 +32,12 @@ does not fit there. A 3,330-byte sketch looked as if fifteen words
 (3,425 bytes) would do. The engine before the keyboard entry was 3,828
 bytes. Sixteen words free 3,601 and do not fit. Seventeen words free
 3,881 and were 45 bytes short once the keyboard entry was added. Eighteen
-words free 4,059: the code is 3,924 bytes at `0x0807A38C`–`0x0807B2E0`.
+words free 4,059. Nineteen words free 4,287 and are 33 bytes short.
+Twenty words free 4,442. The boundary `0x0807A20D` is not 4-byte
+aligned, so the code is 4,320 bytes at `0x0807A210`–`0x0807B2F0`.
 See `docs/SUPERFREAKER.md`.
 
-## Keyboard events in the emulator — keys measured, OCT | MOD not
+## Keyboard events in the emulator — Oct | Mod is 0x0401
 
 `microfreak-emu` does not run the keyboard coprocessor. The main chip
 already decodes an 8-byte USART2 frame: `AA`, then six bytes, then an
@@ -45,12 +47,15 @@ n+48. That was checked for indexes 0, 7, 12 and 24 (notes 48, 55, 60
 and 72). The mode's keyboard entry is the note call at `0x0803AD9E`.
 It stays a single stock note until mailbox op 7 arms the layout.
 
-`mfemu panel` knows Shift (`0x0804`) and Hold (`0x0204`). Pressing the
-button ids the handler compares did not put OCT or MOD on the display.
-`0x0401` showed a Range screen, `0x0405` Time Division, `0x0503` LFO
-Sync, and `0x0902` a matrix assign. None of those is named OCT | MOD
-here. That id is still unknown, and the Shift+OCT|MOD toggle is not in
-the image.
+`mfemu panel` knows Shift (`0x0804`) and Hold (`0x0204`). Control
+`0x0401` is Arp/Range. The button handler sends that id to the range
+editor, and to the sequencer mod-track path when `0x0803B7C0` returns
+nonzero. The manual's Oct | Mod button is the control that does those
+two jobs: it changes arp range, and it selects a seq mod track. The
+image branches at the button down and up calls (`0x0804348C` and
+`0x080434A4`). Shift plus that button toggles the layout and does not
+run the stock action. The button alone still does. The OLED does not
+yet show `ORCHID ON` or `ORCHID OFF`.
 
 ## Physical flash — not authorized
 

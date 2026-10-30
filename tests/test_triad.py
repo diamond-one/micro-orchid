@@ -13,6 +13,9 @@ from firmware.triad import (
     CAVE,
     CAVE_END,
     DISPATCH,
+    BUTTON_DOWN,
+    BUTTON_FN,
+    BUTTON_UP,
     HOOK_SITE,
     KEY_SITE,
     MODE_CAVE,
@@ -34,6 +37,8 @@ def _image() -> bytearray:
     image = bytearray(473695)
     image[HOOK_SITE - BASE:HOOK_SITE - BASE + 4] = encode_bl(HOOK_SITE, DISPATCH)
     image[KEY_SITE - BASE:KEY_SITE - BASE + 4] = encode_bl(KEY_SITE, DISPATCH)
+    image[BUTTON_DOWN - BASE:BUTTON_DOWN - BASE + 4] = encode_bl(BUTTON_DOWN, BUTTON_FN)
+    image[BUTTON_UP - BASE:BUTTON_UP - BASE + 4] = encode_bl(BUTTON_UP, BUTTON_FN)
     struct.pack_into("<I", image, BANK4_SIZE_ADDR - BASE, BANK4_SIZE)
     return image
 
@@ -80,18 +85,20 @@ class TriadTests(unittest.TestCase):
         ):
             self.assertTrue(placement_ok(start, end), hex(start))
 
-    def test_mode_fits_in_eighteen_retired_words(self):
-        code, chord_at, key_at = compile_mode()
+    def test_mode_fits_in_twenty_retired_words(self):
+        code, chord_at, key_at, button_at = compile_mode()
         image = bytearray(_image())
         struct.pack_into("<I", image, VECTOR_SP - BASE, OLD_STACK)
         struct.pack_into("<I", image, STARTUP_SP - BASE, OLD_STACK)
-        patched = apply_mode(bytes(image), code, chord_at, key_at)
+        patched = apply_mode(bytes(image), code, chord_at, key_at, button_at)
         self.assertEqual(
             [(item["start"], item["end"]) for item in PATCH_MANIFEST],
             [
                 (VECTOR_SP, VECTOR_SP + 4),
                 (HOOK_SITE, HOOK_SITE + 4),
                 (KEY_SITE, KEY_SITE + 4),
+                (BUTTON_DOWN, BUTTON_DOWN + 4),
+                (BUTTON_UP, BUTTON_UP + 4),
                 (STARTUP_SP, STARTUP_SP + 4),
                 (BANK4_SIZE_ADDR, BANK4_SIZE_ADDR + 4),
                 (MODE_CAVE, MODE_CAVE + len(code)),
@@ -107,6 +114,11 @@ class TriadTests(unittest.TestCase):
             patched[KEY_SITE - BASE:KEY_SITE - BASE + 4],
             encode_bl(KEY_SITE, MODE_CAVE + key_at),
         )
+        for site in (BUTTON_DOWN, BUTTON_UP):
+            self.assertEqual(
+                patched[site - BASE:site - BASE + 4],
+                encode_bl(site, MODE_CAVE + button_at),
+            )
 
 
 if __name__ == "__main__":

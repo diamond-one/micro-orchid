@@ -3,7 +3,7 @@
 These addresses come from the public microfreak-emu notes for firmware
 5.0.0.2084. The stock and SuperFreaker hashes below were checked against
 the user's files. Both images have been booted under Renode. The patch
-manifest lists the triad hook's three ranges and no firmware bytes.
+manifest lists the mode image's five ranges and no firmware bytes.
 
 No function here writes a device.
 """
@@ -37,12 +37,13 @@ SUPERFREAKER_PAYLOAD_SHA256 = (
     "00977cbb023f680500ab1c151342a7df5f462d9355e408e8c59b96e2d12c8c19"
 )
 
-# Ranges a triad image changes. Lengths only: no firmware bytes.
-# The hook call, bank 4's size word, and the code in the retired word.
+# Ranges the mode image changes. Lengths only: no firmware bytes.
 PATCH_MANIFEST: list[dict[str, object]] = [
-    {"start": 0x080478EA, "end": 0x080478EE, "what": "bl to the triad hook"},
-    {"start": 0x0807885C, "end": 0x08078860, "what": "bank 4 size, last word retired"},
-    {"start": 0x0807B264, "end": 0x0807B2D2, "what": "major-triad hook"},
+    {"start": 0x0800C000, "end": 0x0800C004, "what": "stack top, 512 bytes reserved"},
+    {"start": 0x080478EA, "end": 0x080478EE, "what": "bl to the mode hook"},
+    {"start": 0x0805F884, "end": 0x0805F888, "what": "startup stack top"},
+    {"start": 0x0807885C, "end": 0x08078860, "what": "bank 4 size, 17 words retired"},
+    {"start": 0x0807A440, "end": 0x0807B334, "what": "Orchid mode"},
 ]
 
 

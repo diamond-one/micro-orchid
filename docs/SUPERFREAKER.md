@@ -85,6 +85,10 @@ the descriptor, is the way to get more than 259 bytes:
 | 4 | 971 |
 | 6 | 1371 |
 | 8 | 1831 |
+| 15 | 3425 |
+| 16 | 3601 |
+| 17 | 3881 |
+| 18 | 4059 |
 
 The cut has to land on a word boundary. A mid-word size leaves a partial
 bitstream. Each retired word is a factory speech word that no longer
@@ -104,10 +108,18 @@ still equal to stock outside SuperFreaker's window.
 - writes the banner at `0x080757AC`
 - writes the shift-lock handler at `0x080387A4`
 
-The speech cave passes that test. It is still 259 bytes, and the chord
-engine does not fit in it. Orchid's Shift+OCT|MOD toggle also cannot reuse
-SuperFreaker's shift-lock site. The toggle has to be a new hook on a byte
-range this check still allows, chained so their lock behavior still runs.
+The one-word speech cave passes that test. The mode does not fit in it.
+The combined image retires 17 bank-4 words, writes 3,828 bytes at
+`0x0807A440`, and also changes the bank-4 size, the channel-callback
+branch at `0x080478EA`, and both stack tops. `placement_ok` accepts
+those five ranges. Orchid's Shift+OCT|MOD toggle also cannot reuse
+SuperFreaker's shift-lock site. The toggle has to be a new hook on a
+byte range this check still allows, chained so their lock behavior
+still runs. The 25 key ids are still unknown, so this image does not
+contain that toggle.
 
-No combined image has been built. The unmodified SuperFreaker image does
-boot: Renode 1.17 reached its `main()` at 6,915,727 instructions.
+The unmodified SuperFreaker image boots: Renode 1.17 reached its
+`main()` at 6,915,727 instructions. The mode image, built in a temp
+file from that payload, also reached `main()` and matched the Python
+engine on major, inversion, panic, minor, and a minor seventh. The
+downloads were not modified.

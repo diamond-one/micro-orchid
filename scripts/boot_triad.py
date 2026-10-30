@@ -24,12 +24,14 @@ from firmware.coexist import placement_ok  # noqa: E402
 from firmware.triad import (  # noqa: E402
     BANK4_SIZE_ADDR,
     HOOK_SITE,
-    apply_triad,
+    STARTUP_SP,
+    VECTOR_SP,
+    apply_mode,
     changed_spans,
-    compile_hook,
-    expand_message,
+    compile_mode,
 )
-from orchid.chords import Quality, spell  # noqa: E402
+from orchid.engine import Engine  # noqa: E402
+from orchid.layout import Key  # noqa: E402
 from scripts.inspect_firmware import load_mff, payload  # noqa: E402
 
 STOCK = Path(r"C:\Users\thisi\Downloads\MicroFreak_Firmware_Update_5_0_0_2084.mff")
@@ -39,14 +41,16 @@ VELOCITY = 100
 
 
 def build() -> tuple[bytes, bytes]:
-    code = compile_hook()
+    code = compile_mode()
     stock = payload(load_mff(STOCK)[2][0][1])
     base = payload(load_mff(SUPER)[2][0][1])
-    for address, length in ((HOOK_SITE, 4), (BANK4_SIZE_ADDR, 4)):
+    for address, length in (
+        (HOOK_SITE, 4), (BANK4_SIZE_ADDR, 4), (VECTOR_SP, 4), (STARTUP_SP, 4),
+    ):
         offset = address - 0x0800C000
         if stock[offset:offset + length] != base[offset:offset + length]:
             raise SystemExit(f"SuperFreaker already differs at 0x{address:08X}")
-    patched = bytes(apply_triad(base, code))
+    patched = bytes(apply_mode(base, code))
     for start, end in changed_spans(base, patched):
         if not placement_ok(start, end):
             raise SystemExit(f"patch overlaps SuperFreaker at 0x{start:08X}")
@@ -64,14 +68,18 @@ def _voices(log_text: str) -> list[int]:
     return notes
 
 
-def _expect(label: str, words: list[int], message: int) -> bool:
-    expected = expand_message(message)
-    got_notes = [(word >> 8) & 0xFF for word in words]
-    want_notes = [(word >> 8) & 0xFF for word in expected]
-    ok = words == expected
-    print(f"{label}: got {got_notes}  engine {want_notes}  {'PASS' if ok else 'FAIL'}")
-    if not ok:
-        print(f"  words {['0x%06X' % word for word in words]}")
+def _notes(words: list[int]) -> list[tuple[str, int]]:
+    out = []
+    for word in words:
+        kind = "off" if (word & 0xF0) == 0x80 else "on"
+        out.append((kind, (word >> 8) & 0xFF))
+    return out
+
+
+def _expect(label: str, words: list[int], events: list[tuple[str, int]]) -> bool:
+    got = _notes(words)
+    ok = got == events
+    print(f"{label}: got {got}  engine {events}  {'PASS' if ok else 'FAIL'}")
     return ok
 
 
@@ -108,7 +116,13 @@ def boot_and_compare(patched: bytes) -> int:
         print(synth.monitor(hook).strip() or "hook armed")
         print(synth.monitor("sysbus WriteByte 0x200007E4 0x7F").strip() or "channel omni")
 
-        def capture(message: list[int]) -> list[int]:
+        def mail(op: int, a: int = 0, b: int = 0) -> None:
+            synth.monitor("sysbus WriteByte 0x2001FF00 %d" % op)
+            synth.monitor("sysbus WriteByte 0x2001FF01 %d" % a)
+            synth.monitor("sysbus WriteByte 0x2001FF02 %d" % b)
+            synth.monitor("sysbus WriteByte 0x2001FF03 1")
+
+        def capture(message: list[int], expect: int) -> list[int]:
             before = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
             synth.send(message)
             end = time.time() + 45
@@ -116,20 +130,33 @@ def boot_and_compare(patched: bytes) -> int:
             while time.time() < end:
                 text = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
                 latest = _voices(text[len(before):])
-                if len(latest) >= 3:
-                    time.sleep(1.0)
+                if len(latest) >= expect:
+                    time.sleep(0.8)
                     text = Path(synth.log_path).read_text(encoding="utf-8", errors="replace")
                     return _voices(text[len(before):])
-                time.sleep(0.5)
+                time.sleep(0.4)
             return latest
 
-        note_on = 0x90 | (ROOT_NOTE << 8) | (VELOCITY << 16)
-        note_off = 0x80 | (ROOT_NOTE << 8) | (0x40 << 16)
-        engine = spell(ROOT_NOTE, Quality.MAJ)
-        print(f"python engine spell({ROOT_NOTE}) = {engine}")
-        on_ok = _expect("note-on", capture([0x90, ROOT_NOTE, VELOCITY]), note_on)
-        off_ok = _expect("note-off", capture([0x80, ROOT_NOTE, 0x40]), note_off)
-        return 0 if on_ok and off_ok else 1
+        def pairs(events) -> list[tuple[str, int]]:
+            return [(event.kind, event.note) for event in events]
+
+        engine = Engine()
+        major = pairs(engine.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
+        ok = _expect("major", capture([0x90, ROOT_NOTE, VELOCITY], len(major)), major)
+        moved = pairs(engine.modifier_down(Key.INV_UP))
+        mail(1, 9)
+        ok = _expect("inversion", capture([0x80, 1, 0x40], len(moved)), moved) and ok
+        released = pairs(engine.panic())
+        mail(6)
+        ok = _expect("panic", capture([0x80, ROOT_NOTE, 0x40], len(released)), released) and ok
+        engine.modifier_down(Key.MIN)
+        minor = pairs(engine.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
+        mail(1, 1)
+        ok = _expect("minor", capture([0x90, ROOT_NOTE, VELOCITY], len(minor)), minor) and ok
+        seventh = pairs(engine.modifier_down(Key.MIN7))
+        mail(1, 5)
+        ok = _expect("minor seventh", capture([0x80, 2, 0x40], len(seventh)), seventh) and ok
+        return 0 if ok else 1
 
 
 def main() -> int:

@@ -5,8 +5,8 @@ user's stock 5.0.0.2084 image and SuperFreaker 0.1.2. It contains no firmware
 bytes. A range is half-open: start is included, end is not.
 
 The speech-vocabulary cave SuperFreaker left alone is still only 259 bytes.
-Landing there does not collide with SuperFreaker. It also does not fit the
-chord engine.
+Landing there does not collide with SuperFreaker. The chord engine does not
+fit in that one word; the mode image retires seventeen bank-4 words instead.
 """
 
 from __future__ import annotations

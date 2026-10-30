@@ -10,10 +10,11 @@ It stays in Downloads. It is not copied into this repo. Renode 1.17 booted
 it to `main()`. SuperFreaker 0.1.2 booted the same way. See
 `docs/ENVIRONMENT.md`.
 
-## Assembler — the triad hook is assembled
+## Assembler — the mode is assembled
 
 clang 23.1.4 targets `thumbv7em-none-eabi`. There is no
-`arm-none-eabi-gcc`. The major-triad hook is 110 bytes.
+`arm-none-eabi-gcc`. The mode image is 3,828 bytes. The one-word triad
+hook is still 110 bytes and is not what the boot script writes.
 
 ## Code space — the speech tail is the room
 
@@ -26,10 +27,12 @@ Retiring the last word frees the existing cave:
 
 - `0x0807B264` .. `0x0807B367` (259 bytes)
 
-That range is byte-identical on stock and SuperFreaker 0.1.2. The triad
-hook uses 110 bytes of it. Two retired words free 450 bytes; three free
-684. The rest of Orchid Mode still does not fit in the one word that was
-accepted. See `docs/SUPERFREAKER.md`.
+That range is byte-identical on stock and SuperFreaker 0.1.2. The mode
+does not fit there. A 3,330-byte sketch looked as if fifteen words
+(3,425 bytes) would do. The real `-Oz -flto` engine is 3,828 bytes.
+Sixteen words free 3,601 and do not fit. Seventeen words free 3,881:
+the code occupies `0x0807A440`–`0x0807B334` and 51 bytes remain. See
+`docs/SUPERFREAKER.md`.
 
 ## Keyboard events in the emulator — blocked
 

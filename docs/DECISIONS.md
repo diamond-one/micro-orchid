@@ -60,13 +60,17 @@ already are in SuperFreaker 0.1.2.
 
 There is no erased hole in the SuperFreaker image. Orchid code goes in the
 tail of speech bank 4, after that bank's size at `0x08078838` is shortened
-to a word boundary. The owner accepted this on 2026-10-30: retire the 22nd
-word of bank 4, the words library, and use the 259 bytes at
-`0x0807B264`–`0x0807B367`. The other 21 words in that bank, and the colors,
-numbers, and letters banks, stay. The four musical voices stay. Retiring
-another word needs a separate decision. `0x0807B367`–`0x0807C84C` is not
-placed in. A span the reachability walk did not enter is not placed in
-either. The word is removed only when a hook is written into that tail.
+to a word boundary. The owner accepted the first cut on 2026-10-30:
+retire the 22nd word of bank 4, the words library, and use the 259 bytes
+at `0x0807B264`–`0x0807B367`. That held the 110-byte major-triad hook.
+The rest of the mode does not fit in one word. The compiled engine is
+3,828 bytes, so the image retires the last 17 words of bank 4 and keeps
+the first five (size `0x39A`, code `0x0807A440`–`0x0807B334`). Sixteen
+words are 227 bytes short. Colors, numbers, letters, and the four
+musical voices stay. `0x0807B367`–`0x0807C84C` is not placed in. A span
+the reachability walk did not enter is not placed in either. A word is
+removed only when the hook is written into that tail. The downloaded
+speech files stay unmodified.
 
 ## What was not copied
 

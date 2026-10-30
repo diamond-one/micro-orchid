@@ -14,8 +14,14 @@ from firmware.triad import (
     CAVE_END,
     DISPATCH,
     HOOK_SITE,
+    MODE_CAVE,
+    OLD_STACK,
+    STARTUP_SP,
+    VECTOR_SP,
+    apply_mode,
     apply_triad,
     compile_hook,
+    compile_mode,
     encode_bl,
     expand_message,
     triad_notes,
@@ -71,15 +77,25 @@ class TriadTests(unittest.TestCase):
             (CAVE, CAVE + len(code)),
         ):
             self.assertTrue(placement_ok(start, end), hex(start))
-            self.assertTrue(APPLICATION[0] <= start and end <= APPLICATION[1])
+
+    def test_mode_fits_in_seventeen_retired_words(self):
+        code = compile_mode()
+        image = bytearray(_image())
+        struct.pack_into("<I", image, VECTOR_SP - BASE, OLD_STACK)
+        struct.pack_into("<I", image, STARTUP_SP - BASE, OLD_STACK)
+        patched = apply_mode(bytes(image), code)
         self.assertEqual(
             [(item["start"], item["end"]) for item in PATCH_MANIFEST],
             [
+                (VECTOR_SP, VECTOR_SP + 4),
                 (HOOK_SITE, HOOK_SITE + 4),
+                (STARTUP_SP, STARTUP_SP + 4),
                 (BANK4_SIZE_ADDR, BANK4_SIZE_ADDR + 4),
-                (CAVE, CAVE + len(code)),
+                (MODE_CAVE, MODE_CAVE + len(code)),
             ],
         )
+        for item in PATCH_MANIFEST:
+            self.assertTrue(placement_ok(int(item["start"]), int(item["end"])))
 
 
 if __name__ == "__main__":

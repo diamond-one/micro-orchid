@@ -51,7 +51,10 @@ editor, or its sequencer mod-track path when the sequencer is on.
 Shift plus that button toggles the layout. The button alone keeps the
 stock action. Unarmed, the key is one stock note. The toggle sends
 `ORCHID ON` or `ORCHID OFF` as the panel's existing display frames.
-Renode reconstructed both strings. The button alone does not draw them.
+Renode reconstructed both strings. They stay until the next stock
+redraw. The button alone does not draw them. A key's own aftertouch
+stays on the stock path. Reset leaves the layout off. A down edge
+after startup is a press, because the bus does not report a level.
 
 ## MIDI channels
 

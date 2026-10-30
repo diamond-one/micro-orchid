@@ -2,8 +2,8 @@
 
 ## Active
 
-1. A second person's review of the eight patch ranges. Flash stays
-   unauthorized, and the temp payload is not a release candidate.
+1. Read the independent review of the eight patch ranges and keep the
+   recipe in `docs/RELEASE.md` aligned with it. Flash stays unauthorized.
 
 ## Completed
 

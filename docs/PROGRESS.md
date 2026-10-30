@@ -36,8 +36,13 @@ frame builder. Renode reconstructed both strings.
 
 ## Not done
 
-- A stored Orchid image. The booted payload is a temp file. The downloads
-  were not modified. A temp hash is not a release candidate.
+- A stored Orchid image. `scripts/release_recipe.py` builds it in memory
+  and prints the hash. The downloads were not modified.
+- Key pressure on chord tones other than the key's own note.
+- A button level at power-on. The bus reports edges. Reset leaves the
+  layout off.
+- Clearing `ORCHID ON` and `ORCHID OFF` without waiting for the next
+  stock redraw.
 
 ## Latest test
 
@@ -46,7 +51,8 @@ frame builder. Renode reconstructed both strings.
 - unit tests: PASS (69 ran, 0 failed, 0 errors)
 - stock firmware boot: PASS (`main()` at 6,915,574 instructions, PC `0x08023444`)
 - SuperFreaker 0.1.2 boot: PASS (`main()` at 6,915,727 instructions, PC `0x08024FB6`)
-- mode image: PASS. Reached `main()`. Against the Python engine: note 60
+- mode image: PASS. Reached `main()`. Before any button frame, key 12
+  played only 60 and the release cleared it. Against the Python engine: note 60
   played 60, 64, 67; inversion up released 60 and played 72; panic released
   64, 67, 72; minor played 60, 63, 67; a minor seventh added 70; latch kept
   minor after the key lift and returned to major when latch cleared; strum
@@ -67,6 +73,5 @@ frame builder. Renode reconstructed both strings.
 
 ## Next
 
-The display text is in the temp image. A second person has not reviewed
-the eight ranges. Do not write an image to a device, and do not treat
-the temp payload as a release candidate.
+The recipe is `scripts/release_recipe.py`. An independent review of the
+eight ranges is the remaining gate. Do not write an image to a device.

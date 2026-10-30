@@ -66,8 +66,8 @@ def main() -> int:
     native = {
         "status": "BLOCKED",
         "detail": (
-            "The triad hook is assembled. This script does not boot it. "
-            "Bootloader and factory data were not modified."
+            "scripts/release_recipe.py builds the image in memory. "
+            "This script does not boot it and does not write a device."
         ),
         "manifest_entries": len(PATCH_MANIFEST),
     }

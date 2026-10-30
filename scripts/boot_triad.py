@@ -195,6 +195,19 @@ def boot_and_compare(patched: bytes) -> int:
         def pairs(events) -> list[tuple[str, int]]:
             return [(event.kind, event.note) for event in events]
 
+        # No button frame has been sent. A key is one stock note, so the
+        # layout did not arm during startup.
+        ok = _expect(
+            "boot layout off",
+            capture(None, 1, key_frame(12, True, VELOCITY)),
+            [("on", ROOT_NOTE)],
+        )
+        ok = _expect(
+            "boot layout off up",
+            capture(None, 1, key_frame(12, False)),
+            [("off", ROOT_NOTE)],
+        ) and ok
+
         engine = Engine()
         major = pairs(engine.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
         ok = _expect("major", capture([0x90, ROOT_NOTE, VELOCITY], len(major)), major)

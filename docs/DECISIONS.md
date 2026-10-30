@@ -82,6 +82,31 @@ the reachability walk did not enter is not placed in either. A word is
 removed only when the hook is written into that tail. The downloaded
 speech files stay unmodified.
 
+## What stayed out of this image
+
+Three measured gaps stay out. Each one would break a required behavior
+or re-enter a stock function.
+
+Key pressure stays on the stock call at `0x0803AE28`. That call is
+polyphonic aftertouch for the key's own note. While a root key is down,
+that note is the chord root, so the root still receives pressure. The
+third and the fifth do not. Spreading pressure to every sounding note
+would add a ninth patched range, and the activation spec does not
+require it.
+
+Buttons already held at power-on stay out of the toggle. The panel bus
+delivers edges. A down frame after startup is a press, which is the
+required Shift+Oct|Mod activation. There is no level to read, so a
+boot-time edge cannot be told from that press. Ignoring the first combo
+would also ignore the first real press. Reset still leaves the layout
+off, and `scripts/boot_triad.py` checks that a key is one note before
+any button frame. The recovery chord remains the bootloader's.
+
+`ORCHID ON` and `ORCHID OFF` stay on the OLED until the next stock
+redraw. The frames are sent when the layout changes. Clearing them from
+SysTick would call the panel sender at `0x08021414` from an interrupt
+while the main thread may already be inside that sender.
+
 ## What was not copied
 
 ChoralRoot's engine was read. Its C was not imported. The interval numbers

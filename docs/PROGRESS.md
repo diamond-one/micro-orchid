@@ -2,7 +2,7 @@
 
 Phase: Orchid Mode is in a SuperFreaker image. Under Renode the MIDI path
 matched the Python engine for a major triad, an inversion, panic, a minor
-triad, a minor seventh, latch, strum, and arp. The same image also
+triad, a minor seventh, latch, bass, and arp. The same image also
 branches at the key-note call. Key index n is MIDI note n+48. Mailbox
 op 7 still arms the same layout. Shift plus control `0x0401` toggles it.
 That id is Arp/Range, which is also the sequencer mod-track button.
@@ -28,10 +28,10 @@ the layout instead of opening the range page. The same shortcut shows
   ranges in `firmware/superfreaker_v0_1_2_ranges.json`. Coprocessors match
   stock. The speech cave is untouched by SuperFreaker. Their shift-lock
   site is reserved.
-- Measured the mode at 4,569 bytes with `-Oz -flto`. Twenty-one bank-4
+- Measured the mode at 4,427 bytes with `-Oz -flto`. Twenty-one bank-4
   words leave 4,605 bytes. The boundary is `0x0807A16A`, so the code
   starts at the next 4-byte address (`0x0807A16C`) and ends at
-  `0x0807B345`. Twenty leave 4,439 usable bytes and were 54 short once
+  `0x0807B2B7`. Twenty leave 4,439 usable bytes and were 54 short once
   the display text was added. The image keeps the first word of that
   bank. Colors, numbers, letters, and the four musical voices stay.
 - Measured the key frame on stock firmware under Renode. Subcommand
@@ -58,8 +58,8 @@ the layout instead of opening the range page. The same shortcut shows
   played only 60 and the release cleared it. Against the Python engine: note 60
   played 60, 64, 67; inversion up released 60 and played 72; panic released
   64, 67, 72; minor played 60, 63, 67; a minor seventh added 70; latch kept
-  minor after the key lift and returned to major when latch cleared; strum
-  played 60, then 64, and a root release cancelled the rest; arp played 60
+  minor after the key lift and returned to major when latch cleared; bass
+  played 48, 60, 64, 67, and the release cleared all four; arp played 60
   and the next step released 60 and played 64. Key 12 then played 60, 64,
   67; key 1 moved 64 to 63; releasing key 12 cleared the chord. After
   disarm, key 12 played only 60. Shift alone and Oct|Mod alone left that

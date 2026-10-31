@@ -22,7 +22,7 @@
   Mailbox op 7 arms the layout: indexes 0-11 are modifiers and 12-24 are
   roots. Unarmed, the key stays one stock note.
 - Orchid Mode in the speech tail. Retires the last 21 words of bank 4
-  (size `0xC6`, code at `0x0807A16C`, 4,569 bytes, ends `0x0807B345`).
+  (size `0xC6`, code at `0x0807A16C`, 4,427 bytes, ends `0x0807B2B7`).
   Branches from the MIDI channel callback at `0x080478EA`, the key-note
   call at `0x0803AD9E`, and the button edges at `0x0804348C` and
   `0x080434A4`. Both stack tops (`0x0800C000` and `0x0805F884`) move to
@@ -41,7 +41,7 @@
 - uv, clang, and Renode 1.17. Stock `mfemu check` is READY. Stock and
   SuperFreaker 0.1.2 both reach `main()` in Renode. No device write.
 - Chord spelling, four-voice reduction, engine lifecycle, virtual host.
-- Latch, strum, and arp on the emulated chip, through the same mailbox.
+- Latch, bass, and arp on the emulated chip, through the same mailbox.
   Latch kept a minor chord after the key lift. Strum played the root,
   then the third, and a release cancelled the fifth. Arp stepped from
   60 to 64.

@@ -28,13 +28,6 @@ class Event:
 
 
 @dataclass
-class _Pending:
-    due: int
-    note: int
-    velocity: int
-
-
-@dataclass
 class _Finger:
     stack: tuple[Quality, ...] = ()
     ext: Ext = Ext.NONE
@@ -55,7 +48,6 @@ class Engine:
 
     voice_limit: int | None = 4
     sixth_up: bool = False
-    strum_ms: int = 30
     arp_ms: int = 120
     key_mode: str | None = None
     tonic: int = 0
@@ -65,14 +57,12 @@ class Engine:
     latch: bool = False
     latch_mods: _Finger = field(default_factory=_Finger)
     inversion: int = 0
-    strum: bool = False
+    bass: bool = False
     arp: bool = False
     roots: dict[int, tuple[int, int]] = field(default_factory=dict)
     sounding: set[int] = field(default_factory=set)
-    pending: list[_Pending] = field(default_factory=list)
     arp_pos: int = 0
     arp_acc: int = 0
-    now: int = 0
     _chord_signature: tuple[int, ...] = ()
 
     def modifier_down(self, key: Key) -> list[Event]:
@@ -86,8 +76,8 @@ class Engine:
             self.inversion = max(-12, self.inversion - 1)
         elif key is Key.INV_UP:
             self.inversion = min(12, self.inversion + 1)
-        elif key is Key.STRUM:
-            self.strum = not self.strum
+        elif key is Key.BASS:
+            self.bass = not self.bass
         elif key is Key.ARP:
             self.arp = not self.arp
             self.arp_pos = 0
@@ -103,7 +93,7 @@ class Engine:
                 self.q_stack.remove(quality)
         elif key in EXTENSION_KEYS:
             self.ext_held.discard(EXTENSION_KEYS[key])
-        elif key in (Key.INV_DOWN, Key.INV_UP, Key.STRUM, Key.ARP):
+        elif key in (Key.INV_DOWN, Key.INV_UP, Key.BASS, Key.ARP):
             return []
         else:
             raise ValueError(key)
@@ -154,14 +144,13 @@ class Engine:
         """Release every generated note and clear performance state."""
         events = [Event("off", note) for note in sorted(self.sounding)]
         self.sounding.clear()
-        self.pending.clear()
         self.roots.clear()
         self.q_stack.clear()
         self.ext_held.clear()
         self.latch = False
         self.latch_mods = _Finger()
         self.inversion = 0
-        self.strum = False
+        self.bass = False
         self.arp = False
         self.arp_pos = 0
         self.arp_acc = 0
@@ -171,26 +160,17 @@ class Engine:
     def advance(self, ms: int) -> list[Event]:
         if ms < 0:
             raise ValueError(ms)
-        self.now += ms
-        events: list[Event] = []
-        if self.arp and self._arp_pool():
-            self.arp_acc += ms
-            stepped = False
-            while self.arp_acc >= self.arp_ms:
-                self.arp_acc -= self.arp_ms
-                self.arp_pos += 1
-                stepped = True
-            if stepped:
-                events.extend(self._reconcile())
-            return events
-        due = [item for item in self.pending if item.due <= self.now]
-        self.pending = [item for item in self.pending if item.due > self.now]
-        wanted = self._wanted()
-        for item in due:
-            if item.note in wanted and item.note not in self.sounding:
-                events.append(Event("on", item.note, item.velocity))
-                self.sounding.add(item.note)
-        return events
+        if not (self.arp and self._arp_pool()):
+            return []
+        self.arp_acc += ms
+        stepped = False
+        while self.arp_acc >= self.arp_ms:
+            self.arp_acc -= self.arp_ms
+            self.arp_pos += 1
+            stepped = True
+        if stepped:
+            return self._reconcile()
+        return []
 
     def held_notes(self) -> tuple[int, ...]:
         return tuple(sorted(self.sounding))
@@ -242,14 +222,31 @@ class Engine:
         sounded = note + shift
         if not 0 <= sounded <= 127 or limit == 0:
             return []
-        return spell(
+        # The bass is one of the notes already voiced, an octave lower.
+        # It takes one of the four voices, so the chord is spelled into
+        # the voices that remain.
+        spell_limit = limit
+        if self.bass and limit is not None and limit >= 2:
+            spell_limit = limit - 1
+        notes = spell(
             sounded,
             quality,
             mods.ext,
             sixth_up=self.sixth_up,
             inversion=self.inversion,
-            voice_limit=limit,
+            voice_limit=spell_limit,
         )
+        return self._with_bass(notes, limit)
+
+    def _with_bass(self, notes: list[int], limit: int | None) -> list[int]:
+        if not self.bass or not notes:
+            return notes
+        bass = min(notes) - 12
+        if bass < 0 or bass in notes:
+            return notes
+        if limit is not None and len(notes) >= limit:
+            return notes
+        return sorted([*notes, bass])
 
     def _all_chords(self) -> dict[int, list[int]]:
         budgets = self._budgets()
@@ -293,27 +290,14 @@ class Engine:
             self.arp_pos = 0
             self.arp_acc = 0
             self._chord_signature = signature
-            self.pending.clear()
         wanted = self._wanted()
         events: list[Event] = []
-        if not changed:
-            self.pending = [item for item in self.pending if item.note in wanted]
-        pending_notes = {item.note for item in self.pending}
         for note in sorted(self.sounding):
             if note not in wanted:
                 events.append(Event("off", note))
                 self.sounding.discard(note)
-        fresh = [note for note in sorted(wanted) if note not in self.sounding and note not in pending_notes]
-        if self.strum and not self.arp:
-            for index, note in enumerate(fresh):
-                delay = index * self.strum_ms
-                if delay == 0:
-                    events.append(Event("on", note, wanted[note]))
-                    self.sounding.add(note)
-                else:
-                    self.pending.append(_Pending(self.now + delay, note, wanted[note]))
-        else:
-            for note in fresh:
+        for note in sorted(wanted):
+            if note not in self.sounding:
                 events.append(Event("on", note, wanted[note]))
                 self.sounding.add(note)
         return events

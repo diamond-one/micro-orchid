@@ -23,7 +23,7 @@ class Key(Enum):
     NINTH = "ninth"
     INV_DOWN = "inv_down"
     INV_UP = "inv_up"
-    STRUM = "strum"
+    BASS = "bass"
     ARP = "arp"
 
 
@@ -38,7 +38,7 @@ LAYOUT: tuple[Key, ...] = (
     Key.NINTH,
     Key.INV_DOWN,
     Key.INV_UP,
-    Key.STRUM,
+    Key.BASS,
     Key.ARP,
 )
 

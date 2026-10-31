@@ -257,20 +257,14 @@ def boot_and_compare(patched: bytes) -> int:
 
         cleared = pairs(engine.panic())
         mail(6)
-        ok = _expect("clear for strum", capture([0x80, 8, 0x40], len(cleared)), cleared) and ok
-        engine.modifier_down(Key.STRUM)
+        ok = _expect("clear for bass", capture([0x80, 8, 0x40], len(cleared)), cleared) and ok
+        engine.modifier_down(Key.BASS)
         mail(1, 10)
-        ok = _expect("strum on", capture([0x80, 9, 0x40], 0), []) and ok
-        strum_root = pairs(engine.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
-        ok = _expect("strum root", capture([0x90, ROOT_NOTE, VELOCITY], len(strum_root)), strum_root) and ok
-        strum_step = pairs(engine.advance(30))
-        mail(5, 30)
-        ok = _expect("strum step", capture([0x80, 10, 0x40], len(strum_step)), strum_step) and ok
-        strum_stop = pairs(engine.root_up(ROOT_NOTE))
-        ok = _expect("strum release", capture([0x80, ROOT_NOTE, 0x40], len(strum_stop)), strum_stop) and ok
-        engine.advance(100)
-        mail(5, 100)
-        ok = _expect("strum cancelled", capture([0x80, 11, 0x40], 0), []) and ok
+        ok = _expect("bass on", capture([0x80, 9, 0x40], 0), []) and ok
+        bass_root = pairs(engine.root_down(ROOT_NOTE, ROOT_NOTE, VELOCITY))
+        ok = _expect("bass root", capture([0x90, ROOT_NOTE, VELOCITY], len(bass_root)), bass_root) and ok
+        bass_stop = pairs(engine.root_up(ROOT_NOTE))
+        ok = _expect("bass release", capture([0x80, ROOT_NOTE, 0x40], len(bass_stop)), bass_stop) and ok
 
         cleared = pairs(engine.panic())
         mail(6)
@@ -298,6 +292,55 @@ def boot_and_compare(patched: bytes) -> int:
         ok = _expect("key minor", capture(None, len(minor_key), key_frame(1, True)), minor_key) and ok
         key_up = pairs(keys.root_up(ROOT_NOTE))
         ok = _expect("key release", capture(None, len(key_up), key_frame(12, False)), key_up) and ok
+        ok = _expect("key minor up", capture(None, 0, key_frame(1, False)), []) and ok
+
+        def read_word(addr: int) -> int:
+            return synth.monitor_read("sysbus ReadDoubleWord 0x%08X" % addr) or 0
+
+        def read_half(addr: int) -> int:
+            return synth.monitor_read("sysbus ReadWord 0x%08X" % addr) or 0
+
+        def write_half(addr: int, value: int) -> None:
+            synth.monitor("sysbus WriteByte 0x%08X %d" % (addr, value & 0xFF))
+            synth.monitor("sysbus WriteByte 0x%08X %d" % (addr + 1, (value >> 8) & 0xFF))
+
+        def octave_raw(steps: int, kind: int) -> int:
+            """Storage that the parameter reader turns back into `steps`."""
+            return ((steps << 15) + kind) // (kind + 1)
+
+        # Kbd/Octave is parameter 1 of module 3. The reader at 0x0800E644
+        # turns the stored half and its type byte into 0..6, with 3 at center.
+        value_ptr = read_word(0x2001C8D0)
+        type_ptr = read_word(0x2001C930)
+        octave_cell = value_ptr + 2 if value_ptr else 0
+        octave_type = (synth.monitor_read("sysbus ReadByte 0x%08X" % (type_ptr + 2)) or 0) if type_ptr else 0
+        if not octave_cell or not octave_type:
+            print("octave cell: missing  FAIL")
+            ok = False
+        else:
+            center = read_half(octave_cell)
+            shifted = Engine()
+            write_half(octave_cell, octave_raw(4, octave_type))
+            ok = _expect("octave up control", capture(None, 0, key_frame(0, True)), []) and ok
+            ok = _expect("octave up control lift", capture(None, 0, key_frame(0, False)), []) and ok
+            high = pairs(shifted.root_down(12, 72, VELOCITY))
+            ok = _expect("octave up root", capture(None, len(high), key_frame(12, True, VELOCITY)), high) and ok
+            write_half(octave_cell, center)
+            high_up = pairs(shifted.root_up(12))
+            ok = _expect(
+                "octave release at the old pitch",
+                capture(None, len(high_up), key_frame(12, False)),
+                high_up,
+            ) and ok
+            write_half(octave_cell, octave_raw(2, octave_type))
+            ok = _expect("octave down control", capture(None, 0, key_frame(0, True)), []) and ok
+            ok = _expect("octave down control lift", capture(None, 0, key_frame(0, False)), []) and ok
+            low = pairs(shifted.root_down(12, 48, VELOCITY))
+            ok = _expect("octave down root", capture(None, len(low), key_frame(12, True, VELOCITY)), low) and ok
+            low_up = pairs(shifted.root_up(12))
+            ok = _expect("octave down release", capture(None, len(low_up), key_frame(12, False)), low_up) and ok
+            write_half(octave_cell, center)
+
         cleared = pairs(keys.panic())
         mail(6)
         ok = _expect("disarm", capture([0xC0, 0], len(cleared) if cleared else 0), cleared) and ok

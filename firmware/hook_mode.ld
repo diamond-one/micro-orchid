@@ -4,6 +4,8 @@ EXTERN(orchid_button)
 midi_dispatch = 0x08048524;
 button_handler = 0x08043224;
 panel_send = 0x08021414;
+/* Parameter table the stock note path reads. 0x0301 is Kbd/Octave. */
+kbd_param = 0x0800E644;
 MEMORY {
     /* After 21 retired bank-4 words the boundary is 0x0807A16A, which is
        not an instruction address. The image starts at the next 4-byte

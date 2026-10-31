@@ -1,6 +1,7 @@
-/* MIDI entry. One note is one root. The keyboard entry is orchid_key:
-   stock plays key index n as MIDI note n+48, measured for 0, 7, 12 and 24.
-   Armed, notes 48-59 are modifiers and 60-72 are roots. */
+/* MIDI entry. One note is one root. The keyboard entry is orchid_key.
+   Stock sounds physical index n as n + (Kbd/Octave + 1) * 12. At the
+   center value 3 that is n+48, measured for 0, 7, 12 and 24. Armed, the
+   left 12 indexes stay the controls. Octave buttons move only the roots. */
 
 #include "orchid_engine.h"
 
@@ -11,6 +12,7 @@ extern void button_handler(void *obj, unsigned down, unsigned id, unsigned value
    0x080226D0, then queues the frame on the panel bus. */
 extern void panel_send(void *bus, unsigned lo, unsigned hi, unsigned force);
 extern int orchid_keyboard_on(void);
+extern int kbd_param(void *table, unsigned id);
 
 /* Same bus object the stock UI passes into the sender. */
 #define PANEL_BUS ((void *)0x200005A0)
@@ -23,6 +25,8 @@ static const char TEXT_OFF[] = "ORCHID OFF";
    Oct | Mod button is the control that does those two jobs. */
 #define OCT_MOD_ID 0x0401u
 #define SHIFT_ID 0x0804u
+#define KBD_OCTAVE 0x0301u
+#define KBD_PARAMS ((void *)0x2001C898)
 
 static void *voice_state;
 static unsigned voice_port;
@@ -32,6 +36,8 @@ static unsigned char oct_down;
 static unsigned char combo_used;
 static unsigned char swallow_up;
 static unsigned hook_magic;
+static unsigned key_mask;
+static unsigned char key_note[25];
 
 /* This RAM is the old stack, not stock BSS. A reset does not clear it.
    The first call zeros the button and voice statics. */
@@ -44,7 +50,31 @@ static void ensure_hooks(void) {
     oct_down = 0;
     combo_used = 0;
     swallow_up = 0;
+    key_mask = 0;
     hook_magic = 0x4F524348u;
+}
+
+/* The note in the message already includes the keyboard octave.
+   Subtract it so index 0 stays the left key. A release keeps the
+   octave the key was pressed at, which is why the note is remembered. */
+static int physical_index(unsigned note, int on) {
+    int scale = (kbd_param(KBD_PARAMS, KBD_OCTAVE) + 1) & 0xFF;
+    int index = (int)note - scale * 12;
+    int i;
+    if (on) {
+        if (index < 0 || index > 24) return -1;
+        key_note[index] = (unsigned char)note;
+        key_mask |= 1u << index;
+        return index;
+    }
+    for (i = 24; i >= 0; i--) {
+        if ((key_mask & (1u << i)) && key_note[i] == (unsigned char)note) {
+            key_mask &= ~(1u << i);
+            return i;
+        }
+    }
+    if (index < 0 || index > 24) return -1;
+    return index;
 }
 
 static void play(void *state, unsigned msg, unsigned port, unsigned a3, unsigned a4, unsigned a5,
@@ -118,6 +148,7 @@ static void toggle_mode(void) {
     struct orchid_event events[24];
     int count;
     int i;
+    key_mask = 0;
     if (orchid_keyboard_on()) {
         count = orchid_arm(0, events, 24);
         for (i = 0; i < count; i++) {
@@ -150,17 +181,23 @@ static void handle(void *state, unsigned msg, unsigned port, unsigned a3, unsign
         midi_dispatch(state, msg, port, a3, a4, a5);
         return;
     }
-    if (keyboard && note >= 48u && note <= 59u) {
-        count = orchid_modifier((int)(note - 48u), on, events, 24);
-        play(state, msg, port, a3, a4, a5, events, count);
-        return;
-    }
-    if (kind == 0x80u || kind == 0x90u) {
-        if (!keyboard || (note >= 60u && note <= 72u)) {
-            count = orchid_root((int)note, (int)note, on ? (int)velocity : 64, on, events, 24);
+    if (keyboard && (kind == 0x80u || kind == 0x90u)) {
+        int index = physical_index(note, on);
+        if (index >= 0 && index < 12) {
+            count = orchid_modifier(index, on, events, 24);
             play(state, msg, port, a3, a4, a5, events, count);
             return;
         }
+        if (index >= 12 && index <= 24) {
+            count = orchid_root(index, (int)note, on ? (int)velocity : 64, on, events, 24);
+            play(state, msg, port, a3, a4, a5, events, count);
+            return;
+        }
+    }
+    if (!keyboard && (kind == 0x80u || kind == 0x90u)) {
+        count = orchid_root((int)note, (int)note, on ? (int)velocity : 64, on, events, 24);
+        play(state, msg, port, a3, a4, a5, events, count);
+        return;
     }
     midi_dispatch(state, msg, port, a3, a4, a5);
 }

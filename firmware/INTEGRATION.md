@@ -30,7 +30,7 @@ does not fit there. It retires 21 words of bank 4 and links at
 The button edges at `0x0804348C` and `0x080434A4` are a third.
 See `docs/BLOCKERS.md`.
 
-`scripts/boot_triad.py` shows one root, modifiers, latch, strum, and arp
+`scripts/boot_triad.py` shows one root, modifiers, latch, bass, and arp
 through MIDI, then a key root and a minor modifier. Shift plus control
 `0x0401` toggles that layout and sends `ORCHID ON` or `ORCHID OFF`
 through the frame builder at `0x080226D0`. Shift alone and that button

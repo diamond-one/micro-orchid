@@ -24,14 +24,14 @@ roots share the four voices. Newer roots keep a voice when there are more
 roots than voices. A pitch used by two chords stays on until the last chord
 releases it.
 
-## Inversion, latch, strum, arp
+## Inversion, latch, bass, arp
 
 Inversion up or down steps a rotation and leaves it there. The key does not
 have to stay down. Latch freezes the quality and extension keys that are
 held when it engages. While latched, pressing those keys updates the frozen
-set. Strum and arp toggle on the press. Arp replaces a block chord with one
-note at a time. Strum delays later note-ons; a root release cancels the ones
-that have not sounded.
+set. Bass and arp toggle on the press. Arp replaces a block chord with one
+note at a time. Bass adds the lowest note of the current voicing, one
+octave lower, and that note takes one of the four voices.
 
 ## Keyboard map
 
@@ -45,7 +45,7 @@ The virtual host treats incoming MIDI as key indexes only after subtracting
 Shift plus OCT | MOD toggles the host. The combination fires once per press.
 Held through power-on, it does not enable the mode. OCT | MOD alone and
 Shift alone do not toggle it. Turning the mode off releases every note the
-engine generated and clears latch, inversion, strum, and arp. Nothing is
+engine generated and clears latch, inversion, bass, and arp. Nothing is
 written to flash.
 
 ## Coexistence with SuperFreaker 0.1.2
@@ -79,8 +79,11 @@ boundary `0x0807A16A` is also unaligned, so that image started at
 `0x0807A16C`. The review fixes, clearing the button statics and
 consuming a repeated Oct|Mod down, added 52 bytes (4,545 bytes, ending
 at `0x0807B32D`). Reading the stock shift flag, so a latched Shift
-still toggles, added 24 bytes. The image is 4,569 bytes and ends at
-`0x0807B345`. Colors, numbers, letters, and the four
+still toggles, added 24 bytes. That image was 4,569 bytes and ended at
+`0x0807B345`. Replacing strum with a bass note removed the delay
+clock, so that image was 4,157 bytes and ended at `0x0807B1A9`.
+Keeping the left 12 keys fixed while the octave buttons move the roots
+added 270 bytes. The image is 4,427 bytes and ends at `0x0807B2B7`. Colors, numbers, letters, and the four
 musical voices stay. `0x0807B367`–`0x0807C84C` is not placed in. A span
 the reachability walk did not enter is not placed in either. A word is
 removed only when the hook is written into that tail. The downloaded

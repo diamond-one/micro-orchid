@@ -43,7 +43,7 @@ as BLOCKED or NOT RUN, never as a pass.
 | Path | Role |
 |---|---|
 | `src/orchid/chords.py` | Chord spelling and four-voice reduction |
-| `src/orchid/engine.py` | Latch, inversion, strum, arp, note on/off |
+| `src/orchid/engine.py` | Latch, inversion, bass, arp, note on/off |
 | `src/orchid/midi_host.py` | Shift+OCT\|MOD and virtual MIDI |
 | `firmware/boundaries.py` | Addresses that must not change, verified hashes |
 | `firmware/coexist.py` | Rejects an Orchid patch that would overwrite SuperFreaker |

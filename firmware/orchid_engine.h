@@ -19,6 +19,7 @@ struct orchid_event {
 /* voice_limit 0 keeps every tone. The firmware uses 4. */
 ORCHID_API void orchid_reset(void);
 ORCHID_API void orchid_set_voice_limit(int limit);
+/* The first argument is unused. It used to be the strum delay. */
 ORCHID_API void orchid_set_timing(int strum_ms, int arp_ms);
 
 ORCHID_API int orchid_modifier(int key, int down, struct orchid_event *out, int cap);
@@ -31,7 +32,6 @@ ORCHID_API int orchid_panic(struct orchid_event *out, int cap);
    are modifiers and 12-24 are roots. Turning it off releases sounding notes. */
 ORCHID_API int orchid_arm(int on, struct orchid_event *out, int cap);
 ORCHID_API int orchid_held(unsigned char *notes, int cap);
-ORCHID_API int orchid_pending_count(void);
 
 /* Test mailbox. op is applied on the next orchid_service call.
    1 modifier down, 2 modifier up, 3 latch, 4 key mode, 5 advance, 6 panic,

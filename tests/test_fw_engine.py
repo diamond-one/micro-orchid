@@ -16,7 +16,7 @@ CLANG = Path(r"C:\Program Files\LLVM\bin\clang.exe")
 KEYS = {
     Key.DIM: 0, Key.MIN: 1, Key.MAJ: 2, Key.SUS: 3,
     Key.SIXTH: 4, Key.MIN7: 5, Key.MAJ7: 6, Key.NINTH: 7,
-    Key.INV_DOWN: 8, Key.INV_UP: 9, Key.STRUM: 10, Key.ARP: 11,
+    Key.INV_DOWN: 8, Key.INV_UP: 9, Key.BASS: 10, Key.ARP: 11,
 }
 
 
@@ -44,7 +44,6 @@ def library():
     ):
         getattr(lib, name).restype = ctypes.c_int
     lib.orchid_held.restype = ctypes.c_int
-    lib.orchid_pending_count.restype = ctypes.c_int
     return lib
 
 
@@ -88,9 +87,6 @@ class FwEngine:
         raw = (ctypes.c_uint8 * 16)()
         count = self.lib.orchid_held(raw, 16)
         return tuple(raw[i] for i in range(count))
-
-    def pending(self):
-        return self.lib.orchid_pending_count()
 
 
 def ons(events):
@@ -162,15 +158,22 @@ class FirmwareEngineTests(unittest.TestCase):
         self.assertLessEqual(len(engine.held()), 4)
         self.assertGreater(len(engine.held()), 0)
 
-    def test_strum_and_a_release_cancels_what_has_not_sounded(self):
-        engine = FwEngine(strum_ms=30)
-        engine.modifier(Key.STRUM)
-        self.assertEqual(ons(engine.root(12, 60)), [60])
-        self.assertEqual(engine.pending(), 2)
-        self.assertEqual(ons(engine.advance(30)), [64])
-        engine.root(12, 60, on=False)
-        self.assertEqual(engine.pending(), 0)
-        self.assertEqual(engine.held(), ())
+    def test_bass_adds_the_lowest_voiced_note_an_octave_down(self):
+        engine = FwEngine()
+        engine.modifier(Key.BASS)
+        self.assertEqual(ons(engine.root(12, 60)), [48, 60, 64, 67])
+        self.assertEqual(sorted(offs(engine.root(12, 60, on=False))), [48, 60, 64, 67])
+        engine.root(12, 60)
+        engine.modifier(Key.INV_UP)
+        self.assertEqual(engine.held(), (52, 64, 67, 72))
+        engine.modifier(Key.BASS)
+        self.assertEqual(engine.held(), (64, 67, 72))
+        seventh = FwEngine()
+        seventh.modifier(Key.MIN)
+        seventh.modifier(Key.MIN7)
+        seventh.modifier(Key.BASS)
+        seventh.root(12, 60)
+        self.assertEqual(seventh.held(), (48, 60, 63, 70))
 
     def test_arp_plays_one_note(self):
         engine = FwEngine(arp_ms=100)

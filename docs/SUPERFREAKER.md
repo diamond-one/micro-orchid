@@ -93,7 +93,7 @@ the descriptor, is the way to get more than 259 bytes:
 | 20 | 4442 |
 | 21 | 4605 |
 
-Twenty-one is the current mode: 4,569 bytes, placed at `0x0807A16C`
+Twenty-one is the current mode: 4,427 bytes, placed at `0x0807A16C`
 because the 21-word boundary `0x0807A16A` is not a 4-byte address.
 Twenty words leave 4,439 usable bytes after alignment, and the display
 text overflowed that by 54. Nineteen words are 33 bytes short of the
@@ -119,8 +119,8 @@ still equal to stock outside SuperFreaker's window.
 
 The one-word speech cave passes that test. The mode does not fit in it.
 The combined image retires 21 bank-4 words. The word boundary is
-`0x0807A16A`, so the 4,569 bytes start at `0x0807A16C` and end at
-`0x0807B345`. It also changes the bank-4 size, the channel-callback
+`0x0807A16A`, so the 4,427 bytes start at `0x0807A16C` and end at
+`0x0807B2B7`. It also changes the bank-4 size, the channel-callback
 branch at `0x080478EA`, the key-note branch at `0x0803AD9E`, the button
 edges at `0x0804348C` and `0x080434A4`, and both stack tops.
 `placement_ok` accepts those eight ranges. The toggle does not write
@@ -135,7 +135,7 @@ The unmodified SuperFreaker image boots: Renode 1.17 reached its
 `main()` at 6,915,727 instructions. The mode image, built in a temp
 file from that payload, also reached `main()` and matched the Python
 engine on major, inversion, panic, minor, a minor seventh, latch,
-strum, and arp. The downloads were not modified.
+bass, and arp. The downloads were not modified.
 
 The lowered stack was checked against PC-relative loads. The only one
 at or above `0x2001FE00` is the startup word at `0x0805F884`, and the

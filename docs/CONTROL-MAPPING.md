@@ -12,9 +12,9 @@ or Octave Down.
 | Shift held, then OCT \| MOD | Toggle. Display `ORCHID ON` or `ORCHID OFF`. |
 | Combo held, including extra downs | One toggle only. |
 | Combo already down at `power_on` | Stays off. |
-| Toggle off | Note-offs for every Orchid note. Latch, inversion, strum, and arp clear. |
+| Toggle off | Note-offs for every Orchid note. Latch, inversion, bass, and arp clear. |
 
-Octave Up and Octave Down change the root octave. They do not toggle the mode.
+Octave Up and Octave Down move the right-hand keys by an octave, from three down to three up. The left 12 keys stay the controls. They do not toggle the mode.
 Hold toggles latch.
 
 The stock recovery combination, Shift + Arp + OCT | MOD at power-on, belongs
@@ -36,9 +36,11 @@ Index 0 is the left end of the 25-key bed.
 | 7 | ninth |
 | 8 | inversion down |
 | 9 | inversion up |
-| 10 | strum toggle |
+| 10 | bass toggle |
 | 11 | arpeggiator toggle |
 | 12–24 | roots C, C#, D, … C |
+
+Key 10 stays on after the tap. It adds the lowest note of that chord, one octave down. Tap it again to turn the bass note off.
 
 At octave 0 the roots are MIDI 60 through 72. The host does not use the
 incoming note number as the chord root. It uses the key index.

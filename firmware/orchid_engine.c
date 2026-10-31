@@ -28,13 +28,12 @@ static const unsigned char KEY_MINOR[12] = {2, 12, 1, 3, 12, 2, 12, 2, 3, 20, 3,
 static struct {
     unsigned char voice_limit;
     unsigned char sixth_up;
-    unsigned char strum;
+    unsigned char bass;
     unsigned char arp;
     unsigned char latch;
     unsigned char key_mode;
     unsigned char tonic;
     signed char inversion;
-    unsigned short strum_ms;
     unsigned short arp_ms;
     unsigned char q_stack[MAX_STACK];
     unsigned char q_n;
@@ -48,13 +47,8 @@ static struct {
     unsigned char root_n;
     unsigned char sounding[MAX_HELD];
     unsigned char sound_n;
-    unsigned char pend_note[MAX_HELD];
-    unsigned char pend_vel[MAX_HELD];
-    unsigned int pend_due[MAX_HELD];
-    unsigned char pend_n;
     unsigned char arp_pos;
     unsigned int arp_acc;
-    unsigned int now;
     unsigned char sig[MAX_HELD];
     unsigned char sig_n;
     unsigned char enabled;
@@ -257,6 +251,8 @@ static void fingers(unsigned char *stack, unsigned char *count, unsigned char *e
     *ext = S.latch_ext;
 }
 
+static int add_bass(unsigned char *notes, int n, int room);
+
 static int chord_of(int index, int limit, unsigned char *out) {
     int note = S.root_note[index];
     unsigned char stack[MAX_STACK];
@@ -278,7 +274,28 @@ static int chord_of(int index, int limit, unsigned char *out) {
     if (sounded < 0 || sounded > 127 || limit == 0) {
         return 0;
     }
-    return spell(sounded, quality, ext, S.inversion, limit == 255 ? 255 : limit, out);
+    {
+        /* Bass is the lowest voiced note, one octave down, and it
+           uses one of the voices the chord would have taken. */
+        int room = limit == 255 ? 255 : limit;
+        int used = room;
+        int n;
+        if (S.bass && room != 255 && room >= 2) used = room - 1;
+        n = spell(sounded, quality, ext, S.inversion, used, out);
+        return add_bass(out, n, room);
+    }
+}
+
+static int add_bass(unsigned char *notes, int n, int room) {
+    int bass, i;
+    if (!S.bass || n < 1 || notes[0] < 12) return n;
+    bass = notes[0] - 12;
+    for (i = 0; i < n; i++) if (notes[i] == (unsigned char)bass) return n;
+    if (room != 255 && n >= room) return n;
+    if (n >= MAX_TONES) return n;
+    for (i = n; i > 0; i--) notes[i] = notes[i - 1];
+    notes[0] = (unsigned char)bass;
+    return n + 1;
 }
 
 static void budgets(unsigned char *budget) {
@@ -337,7 +354,6 @@ static int reconcile(struct orchid_event *out, int cap) {
     if (changed) {
         S.arp_pos = 0;
         S.arp_acc = 0;
-        S.pend_n = 0;
         S.sig_n = (unsigned char)pool_n;
         for (i = 0; i < pool_n; i++) S.sig[i] = pool[i];
     }
@@ -360,18 +376,6 @@ static int reconcile(struct orchid_event *out, int cap) {
                 }
             }
         }
-    }
-    if (!changed) {
-        int w = 0;
-        for (i = 0; i < S.pend_n; i++) {
-            for (j = 0; j < wn; j++) if (wanted[j] == S.pend_note[i]) break;
-            if (j == wn) continue;
-            S.pend_note[w] = S.pend_note[i];
-            S.pend_vel[w] = S.pend_vel[i];
-            S.pend_due[w] = S.pend_due[i];
-            w++;
-        }
-        S.pend_n = (unsigned char)w;
     }
     {
         unsigned char sorted[MAX_HELD];
@@ -405,8 +409,6 @@ static int reconcile(struct orchid_event *out, int cap) {
         for (i = 0; i < wn; i++) {
             for (j = 0; j < S.sound_n; j++) if (S.sounding[j] == wanted[i]) break;
             if (j != S.sound_n) continue;
-            for (j = 0; j < S.pend_n; j++) if (S.pend_note[j] == wanted[i]) break;
-            if (j != S.pend_n) continue;
             fresh[fn] = wanted[i];
             fvel[fn] = wvel[i];
             fn++;
@@ -422,27 +424,10 @@ static int reconcile(struct orchid_event *out, int cap) {
                 }
             }
         }
-        if (S.strum && !S.arp) {
-            for (i = 0; i < fn; i++) {
-                unsigned delay = (unsigned)i * S.strum_ms;
-                if (delay == 0) {
-                    if (S.sound_n < MAX_HELD) {
-                        push_event(out, cap, &count, 1, fresh[i], fvel[i]);
-                        S.sounding[S.sound_n++] = fresh[i];
-                    }
-                } else if (S.pend_n < MAX_HELD) {
-                    S.pend_note[S.pend_n] = fresh[i];
-                    S.pend_vel[S.pend_n] = fvel[i];
-                    S.pend_due[S.pend_n] = S.now + delay;
-                    S.pend_n++;
-                }
-            }
-        } else {
-            for (i = 0; i < fn; i++) {
-                if (S.sound_n < MAX_HELD) {
-                    push_event(out, cap, &count, 1, fresh[i], fvel[i]);
-                    S.sounding[S.sound_n++] = fresh[i];
-                }
+        for (i = 0; i < fn; i++) {
+            if (S.sound_n < MAX_HELD) {
+                push_event(out, cap, &count, 1, fresh[i], fvel[i]);
+                S.sounding[S.sound_n++] = fresh[i];
             }
         }
     }
@@ -452,7 +437,6 @@ static int reconcile(struct orchid_event *out, int cap) {
 ORCHID_API void orchid_reset(void) {
     zero(&S, sizeof S);
     S.voice_limit = 4;
-    S.strum_ms = 30;
     S.arp_ms = 120;
     S.magic = 0x4F524348;
 }
@@ -463,8 +447,8 @@ ORCHID_API void orchid_set_voice_limit(int limit) {
 }
 
 ORCHID_API void orchid_set_timing(int strum_ms, int arp_ms) {
+    (void)strum_ms;
     if (S.magic != 0x4F524348) orchid_reset();
-    S.strum_ms = (unsigned short)strum_ms;
     S.arp_ms = (unsigned short)arp_ms;
 }
 
@@ -488,7 +472,7 @@ ORCHID_API int orchid_modifier(int key, int down, struct orchid_event *out, int 
         } else if (key == 9) {
             if (S.inversion < 12) S.inversion++;
         } else if (key == 10) {
-            S.strum ^= 1;
+            S.bass ^= 1;
         } else {
             S.arp ^= 1;
             S.arp_pos = 0;
@@ -567,42 +551,18 @@ static int arp_pool_live(void) {
 }
 
 ORCHID_API int orchid_advance(int ms, struct orchid_event *out, int cap) {
-    int i, w = 0, count = 0;
+    int stepped = 0;
     ensure();
     if (ms < 0) return 0;
-    S.now += (unsigned)ms;
-    if (S.arp && arp_pool_live()) {
-        int stepped = 0;
-        S.arp_acc += (unsigned)ms;
-        while (S.arp_acc >= S.arp_ms) {
-            S.arp_acc -= S.arp_ms;
-            S.arp_pos++;
-            stepped = 1;
-        }
-        if (stepped) return reconcile(out, cap);
-        return 0;
+    if (!(S.arp && arp_pool_live())) return 0;
+    S.arp_acc += (unsigned)ms;
+    while (S.arp_acc >= S.arp_ms) {
+        S.arp_acc -= S.arp_ms;
+        S.arp_pos++;
+        stepped = 1;
     }
-    for (i = 0; i < S.pend_n; i++) {
-        int wanted = 0, j;
-        /* A due strum note plays only while reconcile still wants it.
-           Recompute by seeing it survive in the pending list, which
-           reconcile already filtered. */
-        if (S.pend_due[i] <= S.now) {
-            for (j = 0; j < S.sound_n; j++) if (S.sounding[j] == S.pend_note[i]) break;
-            if (j == S.sound_n && S.sound_n < MAX_HELD) {
-                push_event(out, cap, &count, 1, S.pend_note[i], S.pend_vel[i]);
-                S.sounding[S.sound_n++] = S.pend_note[i];
-            }
-            (void)wanted;
-        } else {
-            S.pend_note[w] = S.pend_note[i];
-            S.pend_vel[w] = S.pend_vel[i];
-            S.pend_due[w] = S.pend_due[i];
-            w++;
-        }
-    }
-    S.pend_n = (unsigned char)w;
-    return count;
+    if (stepped) return reconcile(out, cap);
+    return 0;
 }
 
 ORCHID_API int orchid_panic(struct orchid_event *out, int cap) {
@@ -622,11 +582,10 @@ ORCHID_API int orchid_panic(struct orchid_event *out, int cap) {
     }
     for (i = 0; i < sn; i++) push_event(out, cap, &count, 0, sorted[i], 0);
     {
-        unsigned short strum_ms = S.strum_ms, arp_ms = S.arp_ms;
+        unsigned short arp_ms = S.arp_ms;
         unsigned char limit = S.voice_limit;
         zero(&S, sizeof S);
         S.voice_limit = limit;
-        S.strum_ms = strum_ms;
         S.arp_ms = arp_ms;
         S.magic = 0x4F524348;
     }
@@ -651,11 +610,6 @@ ORCHID_API int orchid_held(unsigned char *notes, int cap) {
     if (n > cap) n = cap;
     for (i = 0; i < n; i++) notes[i] = sorted[i];
     return S.sound_n;
-}
-
-ORCHID_API int orchid_pending_count(void) {
-    ensure();
-    return S.pend_n;
 }
 
 ORCHID_API void orchid_command(int op, int a, int b) {

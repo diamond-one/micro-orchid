@@ -20,10 +20,22 @@ OCT_MOD_ID = 0x0401
 ARP_ID = 0x0400
 
 
-def stock_note(index: int) -> int:
+def stock_note(index: int, octave_param: int = 3) -> int:
+    """MIDI note stock sends for a physical key.
+
+    Kbd/Octave is 3 at the center, and the note is
+    index + (octave_param + 1) * 12. That is why the center is n+48.
+    """
     if not 0 <= index <= 24:
         raise ValueError(f"key index {index} is outside 0..24")
-    return NOTE_BASE + index
+    scale = (octave_param + 1) & 0xFF
+    return index + scale * 12
+
+
+def physical_index(note: int, octave_param: int = 3) -> int:
+    """Physical key 0..24 from a stock note. 0 stays the left key."""
+    scale = (octave_param + 1) & 0xFF
+    return note - scale * 12
 
 
 def key_frame(index: int, down: bool, velocity: int = 100) -> list[int]:

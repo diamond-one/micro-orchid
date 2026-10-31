@@ -7,7 +7,7 @@ physical or virtual keys
   midi_host.Host          Shift+OCT|MOD, octave, hold, channel split
         |
         v
-  engine.Engine           latch, inversion, strum, arp, voice cap, note lifecycle
+  engine.Engine           latch, inversion, bass, arp, voice cap, note lifecycle
         |
         v
   chords.spell            qualities, extensions, four-voice reduction

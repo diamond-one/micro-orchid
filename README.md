@@ -1,5 +1,7 @@
 # micro-orchid
 
+![Orchid keys](docs/orchid-keymap.png)
+
 Orchid-style chord playing for the Arturia MicroFreak.
 
 The chord engine and a virtual MIDI host run here and are covered by tests.
